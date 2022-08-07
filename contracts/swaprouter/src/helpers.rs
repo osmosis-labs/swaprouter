@@ -1,6 +1,11 @@
-use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute};
+use osmosis_std::types::osmosis::gamm::v1beta1::{
+    MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
+    SwapAmountInRoute,
+};
 
 use cosmwasm_std::{Addr, Coin, Deps};
+
+use osmo_bindings::{OsmosisMsg, OsmosisQuerier, OsmosisQuery};
 
 use crate::{
     state::{ROUTING_TABLE, STATE},
@@ -17,13 +22,31 @@ pub fn check_is_contract_owner(deps: Deps, sender: Addr) -> Result<(), ContractE
 }
 
 pub fn validate_pool_route(
-    _deps: Deps,
-    _input_denom: String,
+    deps: Deps,
+    input_denom: String,
     output_denom: String,
     pool_route: Vec<SwapAmountInRoute>,
 ) -> Result<(), ContractError> {
+    let mut current_denom = input_denom;
+
+    // make sure that this route actually works
+    for route_part in &pool_route {
+        let request = QueryTotalPoolLiquidityRequest {
+            pool_id: route_part.pool_id,
+        }
+        .into();
+
+        let res: QueryTotalPoolLiquidityResponse = deps.querier.query(&request)?;
+
+        if !res.liquidity.iter().any(|coin| coin.denom == current_denom) {
+            return Result::Err(ContractError::InvalidPoolRoute {});
+        }
+
+        current_denom = route_part.token_out_denom.clone();
+    }
+
     // make sure the final route output asset is the same as the expected output_denom
-    if pool_route.last().unwrap().token_out_denom != output_denom {
+    if current_denom != output_denom {
         return Result::Err(ContractError::InvalidPoolRoute {});
     }
 
