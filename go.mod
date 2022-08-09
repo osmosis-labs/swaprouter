@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/CosmWasm/wasmd v0.27.0
 	github.com/cosmos/cosmos-sdk v0.46.0
-	github.com/osmosis-labs/osmosis/v10 v10.0.0-20220808120857-e9e440ad44d5
+	github.com/osmosis-labs/osmosis/v10 v10.0.0-20220808125623-ae9753be6418
 	github.com/stretchr/testify v1.8.0
 )
 

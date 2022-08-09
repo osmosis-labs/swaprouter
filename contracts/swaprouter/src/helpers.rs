@@ -3,7 +3,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
     SwapAmountInRoute,
 };
 
-use cosmwasm_std::{Addr, Coin, Deps};
+use cosmwasm_std::{Addr, Coin, Deps, QueryRequest};
 
 use osmo_bindings::{OsmosisMsg, OsmosisQuerier, OsmosisQuery};
 
@@ -31,10 +31,13 @@ pub fn validate_pool_route(
 
     // make sure that this route actually works
     for route_part in &pool_route {
-        let request = QueryTotalPoolLiquidityRequest {
-            pool_id: route_part.pool_id,
-        }
-        .into();
+        let request = QueryRequest::Stargate {
+            path: String::from("/osmosis.gamm.v1beta1.Query/TotalPoolLiquidity"),
+            data: QueryTotalPoolLiquidityRequest {
+                pool_id: route_part.pool_id,
+            }
+            .into(),
+        };
 
         let res: QueryTotalPoolLiquidityResponse = deps.querier.query(&request)?;
 

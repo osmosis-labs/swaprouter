@@ -771,6 +771,8 @@ github.com/osmosis-labs/osmosis/v10 v10.0.0-20220806012758-9114151414f2 h1:Lxm2M
 github.com/osmosis-labs/osmosis/v10 v10.0.0-20220806012758-9114151414f2/go.mod h1:xMLnKgMtkewQDAVlvSEMKZsaTGBx3bsGmx9r8w6GFrM=
 github.com/osmosis-labs/osmosis/v10 v10.0.0-20220808120857-e9e440ad44d5 h1:wNIgL/2CPso3P8Vd2duIRRC3mSEYokU+dhW+bE2QChE=
 github.com/osmosis-labs/osmosis/v10 v10.0.0-20220808120857-e9e440ad44d5/go.mod h1:vLKvkDzE8Y7k18Y5F4P/A/YNIQw2RWfpWIjz55Z39ws=
+github.com/osmosis-labs/osmosis/v10 v10.0.0-20220808125623-ae9753be6418 h1:ncr58rg6GEYiWadrikBxEGSnRqQ1dfYGyNt6VWvzQiY=
+github.com/osmosis-labs/osmosis/v10 v10.0.0-20220808125623-ae9753be6418/go.mod h1:vLKvkDzE8Y7k18Y5F4P/A/YNIQw2RWfpWIjz55Z39ws=
 github.com/osmosis-labs/wasmd v0.27.0-rc2.0.20220517191021-59051aa18d58 h1:15l3Iss2oCGCeJRi2g3CuCnqmEjpAr3Le7cDnoN/LS0=
 github.com/osmosis-labs/wasmd v0.27.0-rc2.0.20220517191021-59051aa18d58/go.mod h1:0h8WBsFhyingomsrN+34JVZe/qRySHYHICyTEokCkYU=
 github.com/otiai10/copy v1.7.0 h1:hVoPiN+t+7d2nzzwMiDHPSOogsWAStewq3TwU05+clE=
