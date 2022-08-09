@@ -1,15 +1,17 @@
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{from_binary, Addr, DepsMut};
+use cosmwasm_std::{Addr, DepsMut, from_binary};
+use cosmwasm_std::testing::{mock_env, mock_info};
+use osmo_bindings::OsmosisQuery;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 
 use crate::contract;
+use crate::mocks::mock_deps_with_custom_querier;
 use crate::msg::{ExecuteMsg, GetOwnerResponse, GetRouteResponse, InstantiateMsg, QueryMsg};
 
 static CREATOR_ADDRESS: &str = "creator";
 
 // test helper
 #[allow(unused_assignments)]
-fn initialize_contract(deps: DepsMut) -> Addr {
+fn initialize_contract(deps: DepsMut<OsmosisQuery>) -> Addr {
     let msg = InstantiateMsg {
         owner: String::from(CREATOR_ADDRESS),
     };
@@ -23,7 +25,7 @@ fn initialize_contract(deps: DepsMut) -> Addr {
 
 #[test]
 fn proper_initialization() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_custom_querier();
 
     let owner = initialize_contract(deps.as_mut());
 
@@ -36,7 +38,7 @@ fn proper_initialization() {
 
 #[test]
 fn set_routes() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_custom_querier();
 
     let owner = initialize_contract(deps.as_mut());
 

@@ -6,6 +6,7 @@ use cosmwasm_std::{
     SubMsgResult, Uint128,
 };
 
+use osmo_bindings::{ OsmosisQuery};
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
 
 use crate::contract::SWAP_REPLY_ID;
@@ -15,7 +16,7 @@ use crate::state::{SwapMsgReplyState, ROUTING_TABLE, SWAP_REPLY_STATES};
 use crate::error::ContractError;
 
 pub fn set_route(
-    deps: DepsMut,
+    deps: DepsMut<OsmosisQuery>,
     info: MessageInfo,
     input_denom: String,
     output_denom: String,
@@ -72,7 +73,7 @@ pub fn trade_with_slippage_limit(
 }
 
 pub fn handle_swap_reply(
-    _deps: DepsMut,
+    _deps: DepsMut<OsmosisQuery>,
     msg: Reply,
     swap_msg_reply_state: SwapMsgReplyState,
 ) -> Result<Response, ContractError> {
