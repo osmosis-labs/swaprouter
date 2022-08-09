@@ -8,6 +8,7 @@ pub mod state;
 
 #[cfg(test)]
 mod contract_tests;
+#[cfg(test)]
 pub mod mocks;
 
 pub use crate::error::ContractError;
