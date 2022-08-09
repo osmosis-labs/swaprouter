@@ -2,17 +2,15 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, SubMsgResponse,
+    BankMsg, Coin, coins, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128,
 };
-
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
 
 use crate::contract::SWAP_REPLY_ID;
-use crate::helpers::{check_is_contract_owner, generate_swap_msg, validate_pool_route};
-use crate::state::{SwapMsgReplyState, ROUTING_TABLE, SWAP_REPLY_STATES};
-
 use crate::error::ContractError;
+use crate::helpers::{check_is_contract_owner, generate_swap_msg, validate_pool_route};
+use crate::state::{ROUTING_TABLE, SWAP_REPLY_STATES, SwapMsgReplyState};
 
 pub fn set_route(
     deps: DepsMut,
@@ -96,7 +94,7 @@ pub fn handle_swap_reply(
         return Ok(Response::new().add_message(bank_msg));
     }
 
-    Result::Err(ContractError::FailedSwap {
+    Err(ContractError::FailedSwap {
         reason: msg.result.unwrap_err(),
     })
 }

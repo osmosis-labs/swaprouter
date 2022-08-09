@@ -1,15 +1,12 @@
+use cosmwasm_std::{Addr, Coin, Deps};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
     SwapAmountInRoute,
 };
 
-use cosmwasm_std::{Addr, Coin, Deps};
-
-use osmo_bindings::{OsmosisMsg, OsmosisQuerier, OsmosisQuery};
-
 use crate::{
-    state::{ROUTING_TABLE, STATE},
     ContractError,
+    state::{ROUTING_TABLE, STATE},
 };
 
 pub fn check_is_contract_owner(deps: Deps, sender: Addr) -> Result<(), ContractError> {
@@ -39,7 +36,7 @@ pub fn validate_pool_route(
         let res: QueryTotalPoolLiquidityResponse = deps.querier.query(&request)?;
 
         if !res.liquidity.iter().any(|coin| coin.denom == current_denom) {
-            return Result::Err(ContractError::InvalidPoolRoute {});
+            return Err(ContractError::InvalidPoolRoute {});
         }
 
         current_denom = route_part.token_out_denom.clone();
@@ -47,7 +44,7 @@ pub fn validate_pool_route(
 
     // make sure the final route output asset is the same as the expected output_denom
     if current_denom != output_denom {
-        return Result::Err(ContractError::InvalidPoolRoute {});
+        return Err(ContractError::InvalidPoolRoute {});
     }
 
     Ok(())
@@ -62,16 +59,10 @@ pub fn generate_swap_msg(
     // get trade route
     let route = ROUTING_TABLE.load(deps.storage, (&input_token.denom, &min_output_token.denom))?;
 
-    // convert input coin to sdk coin stuct
-    let sdk_input_coin = osmosis_std::types::cosmos::base::v1beta1::Coin {
-        denom: input_token.denom,
-        amount: input_token.amount.to_string(),
-    };
-
     Ok(MsgSwapExactAmountIn {
         sender: sender.into_string(),
         routes: route,
-        token_in: Some(sdk_input_coin),
+        token_in: Some(input_token.into()),
         token_out_min_amount: min_output_token.amount.to_string(),
     })
 }
