@@ -100,9 +100,6 @@ func (suite *KeeperTestSuite) SetupTest() {
 
 	suite.bankMsgServer = bankkeeper.NewMsgServerImpl(suite.App.BankKeeper)
 
-	// create a token1/stake pool and a token2/stake pool
-	// suite.SetupGammPoolsWithBondDenomMultiplier([]sdk.Dec{sdk.OneDec(), sdk.OneDec()})
-
 	// create pool 1 as uosmo/uion
 	suite.CreatePool(sdk.NewCoins(sdk.NewInt64Coin("uosmo", 1_000), sdk.NewInt64Coin("uion", 1_000)))
 	// create pool 2 as uosmo/uatom
