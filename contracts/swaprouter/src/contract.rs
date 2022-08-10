@@ -67,12 +67,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    // get intermediate swap reply state. Error if not found.
-    let swap_msg_state = SWAP_REPLY_STATES.load(deps.storage, msg.id)?;
+    if msg.id == SWAP_REPLY_ID {
+        // get intermediate swap reply state. Error if not found.
+        let swap_msg_state = SWAP_REPLY_STATES.load(deps.storage, msg.id)?;
 
-    // prune intermedate state
-    SWAP_REPLY_STATES.remove(deps.storage, msg.id);
+        // prune intermedate state
+        SWAP_REPLY_STATES.remove(deps.storage, msg.id);
 
-    // call reply function to handle the swap return
-    handle_swap_reply(deps, msg, swap_msg_state)
+        // call reply function to handle the swap return
+        handle_swap_reply(deps, msg, swap_msg_state)
+    } else {
+        Ok(Response::new())
+    }
 }
