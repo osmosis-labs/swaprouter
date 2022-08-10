@@ -16,6 +16,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"github.com/osmosis-labs/osmosis/v10/app/apptesting"
+	"github.com/osmosis-labs/osmosis/v10/x/gamm/pool-models/balancer"
+	gammtypes "github.com/osmosis-labs/osmosis/v10/x/gamm/types"
 )
 
 var (
@@ -52,14 +54,40 @@ func (p SudoAuthorizationPolicy) CanModifyContract(admin, actor sdk.AccAddress) 
 	return true
 }
 
+func (suite *KeeperTestSuite) CreatePool(initialLiquidity sdk.Coins) gammtypes.PoolI {
+	var poolAssets []balancer.PoolAsset
+
+	for _, asset := range initialLiquidity {
+		poolAssets = append(poolAssets, balancer.PoolAsset{
+			Weight: sdk.NewInt(1),
+			Token:  asset,
+		})
+	}
+
+	poolParams := balancer.PoolParams{
+		SwapFee: sdk.NewDecWithPrec(1, 2),
+		ExitFee: sdk.NewDecWithPrec(1, 2),
+	}
+
+	msg := balancer.NewMsgCreateBalancerPool(suite.TestAccs[0], poolParams, poolAssets, "")
+
+	poolId, err := suite.App.GAMMKeeper.CreatePool(suite.Ctx, msg)
+	suite.Require().NoError(err)
+
+	pool, err := suite.App.GAMMKeeper.GetPoolAndPoke(suite.Ctx, poolId)
+	suite.Require().NoError(err)
+
+	return pool
+}
+
 func (suite *KeeperTestSuite) SetupTest() {
 	suite.Setup()
 
-	// Fund every TestAcc with 1_000_000 uosmo, token1, and token2.
+	// Fund every TestAcc with 1_000_000_000_000 uosmo, uion, and uatom.
 	fundAccsAmount := sdk.NewCoins(
-		sdk.NewInt64Coin("uosmo", 1_000_000),
-		sdk.NewInt64Coin("token1", 1_000_000),
-		sdk.NewInt64Coin("token2", 1_000_000))
+		sdk.NewInt64Coin("uosmo", 1_000_000_000_000),
+		sdk.NewInt64Coin("uion", 1_000_000_000_000),
+		sdk.NewInt64Coin("uatom", 1_000_000_000_000))
 	for _, acc := range suite.TestAccs {
 		suite.FundAcc(acc, fundAccsAmount)
 	}
@@ -72,8 +100,12 @@ func (suite *KeeperTestSuite) SetupTest() {
 
 	suite.bankMsgServer = bankkeeper.NewMsgServerImpl(suite.App.BankKeeper)
 
-	// create a token1/osmo pool and a token2/osmo pool
-	suite.SetupGammPoolsWithBondDenomMultiplier([]sdk.Dec{sdk.OneDec(), sdk.OneDec()})
+	// create pool 1 as uosmo/uion
+	suite.CreatePool(sdk.NewCoins(sdk.NewInt64Coin("uosmo", 1_000), sdk.NewInt64Coin("uion", 1_000)))
+	// create pool 2 as uosmo/uatom
+	suite.CreatePool(sdk.NewCoins(sdk.NewInt64Coin("uosmo", 1_000), sdk.NewInt64Coin("uatom", 1_000)))
+	// create pool 3 as uatom/uion
+	suite.CreatePool(sdk.NewCoins(sdk.NewInt64Coin("uion", 1_000), sdk.NewInt64Coin("uatom", 1_000)))
 
 	// upload wasm code
 	wasmCode, err := ioutil.ReadFile(wasmFile)
