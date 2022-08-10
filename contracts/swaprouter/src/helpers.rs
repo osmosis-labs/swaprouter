@@ -3,7 +3,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
     SwapAmountInRoute,
 };
 
-use cosmwasm_std::{Addr, Coin, Deps};
+use cosmwasm_std::{Addr, Coin, Deps, Empty, QueryRequest};
 
 use osmo_bindings::{OsmosisMsg, OsmosisQuerier, OsmosisQuery};
 
@@ -31,15 +31,18 @@ pub fn validate_pool_route(
 
     // make sure that this route actually works
     for route_part in &pool_route {
-        let request = QueryTotalPoolLiquidityRequest {
+        let r = QueryTotalPoolLiquidityRequest {
             pool_id: route_part.pool_id,
         }
-        .into();
+        .query(deps.querier);
 
-        let res: QueryTotalPoolLiquidityResponse = deps.querier.query(&request)?;
-
-        if !res.liquidity.iter().any(|coin| coin.denom == current_denom) {
-            return Result::Err(ContractError::InvalidPoolRoute {});
+        if !r?.liquidity.iter().any(|coin| coin.denom == current_denom) {
+            return Result::Err(ContractError::InvalidPoolRoute {
+                reason: format!(
+                    "denom {} is not in pool id {}",
+                    current_denom, route_part.pool_id
+                ),
+            });
         }
 
         current_denom = route_part.token_out_denom.clone();
@@ -47,7 +50,9 @@ pub fn validate_pool_route(
 
     // make sure the final route output asset is the same as the expected output_denom
     if current_denom != output_denom {
-        return Result::Err(ContractError::InvalidPoolRoute {});
+        return Result::Err(ContractError::InvalidPoolRoute {
+            reason: "last denom doesn't match".to_string(),
+        });
     }
 
     Ok(())
