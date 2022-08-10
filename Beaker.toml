@@ -1,1 +1,5 @@
 name = "swaprouter"
+
+[console]
+account_namespace = false
+contract_namespace = false

@@ -1,15 +1,12 @@
+use cosmwasm_std::{Addr, Coin, Deps};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
     SwapAmountInRoute,
 };
 
-use cosmwasm_std::{Addr, Coin, Deps, Empty, QueryRequest};
-
-use osmo_bindings::{OsmosisMsg, OsmosisQuerier, OsmosisQuery};
-
 use crate::{
-    state::{ROUTING_TABLE, STATE},
     ContractError,
+    state::{ROUTING_TABLE, STATE},
 };
 
 pub fn check_is_contract_owner(deps: Deps, sender: Addr) -> Result<(), ContractError> {
@@ -67,16 +64,10 @@ pub fn generate_swap_msg(
     // get trade route
     let route = ROUTING_TABLE.load(deps.storage, (&input_token.denom, &min_output_token.denom))?;
 
-    // convert input coin to sdk coin stuct
-    let sdk_input_coin = osmosis_std::types::cosmos::base::v1beta1::Coin {
-        denom: input_token.denom,
-        amount: input_token.amount.to_string(),
-    };
-
     Ok(MsgSwapExactAmountIn {
         sender: sender.into_string(),
         routes: route,
-        token_in: Some(sdk_input_coin),
+        token_in: Some(input_token.into()),
         token_out_min_amount: min_output_token.amount.to_string(),
     })
 }
