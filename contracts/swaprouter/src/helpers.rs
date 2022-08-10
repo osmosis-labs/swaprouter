@@ -5,8 +5,8 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 };
 
 use crate::{
-    ContractError,
     state::{ROUTING_TABLE, STATE},
+    ContractError,
 };
 
 pub fn check_is_contract_owner(deps: Deps, sender: Addr) -> Result<(), ContractError> {
@@ -28,12 +28,25 @@ pub fn validate_pool_route(
 
     // make sure that this route actually works
     for route_part in &pool_route {
-        let r = QueryTotalPoolLiquidityRequest {
+        let liquidity = QueryTotalPoolLiquidityRequest {
             pool_id: route_part.pool_id,
         }
-        .query(deps.querier);
+        .query(deps.querier)?
+        .liquidity;
 
-        if !r?.liquidity.iter().any(|coin| coin.denom == current_denom) {
+        if !liquidity.iter().any(|coin| coin.denom == current_denom) {
+            return Result::Err(ContractError::InvalidPoolRoute {
+                reason: format!(
+                    "denom {} is not in pool id {}",
+                    current_denom, route_part.pool_id
+                ),
+            });
+        }
+
+        if !liquidity
+            .iter()
+            .any(|coin| coin.denom == route_part.token_out_denom)
+        {
             return Result::Err(ContractError::InvalidPoolRoute {
                 reason: format!(
                     "denom {} is not in pool id {}",
