@@ -3,7 +3,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
     SwapAmountInRoute,
 };
 
-use cosmwasm_std::{Addr, Coin, Deps, QueryRequest};
+use cosmwasm_std::{Addr, Coin, Deps, Empty, QueryRequest};
 
 use osmo_bindings::{OsmosisMsg, OsmosisQuerier, OsmosisQuery};
 
@@ -31,17 +31,27 @@ pub fn validate_pool_route(
 
     // make sure that this route actually works
     for route_part in &pool_route {
-        let request = QueryRequest::Stargate {
-            path: String::from("/osmosis.gamm.v1beta1.Query/TotalPoolLiquidity"),
-            data: QueryTotalPoolLiquidityRequest {
-                pool_id: route_part.pool_id,
-            }
-            .into(),
-        };
+        // let request = QueryRequest::<Empty>::Stargate {
+        //     path: "/osmosis.gamm.v1beta1.Query/TotalPoolLiquidity".to_string(),
+        //     data: QueryTotalPoolLiquidityRequest {
+        //         pool_id: route_part.pool_id,
+        //     }
+        //     .into(),
+        // };
 
-        let res: QueryTotalPoolLiquidityResponse = deps.querier.query(&request)?;
+        // let res: QueryTotalPoolLiquidityResponse = deps.querier.query(&request)?;
 
-        if !res.liquidity.iter().any(|coin| coin.denom == current_denom) {
+        let r = deps.querier.query::<QueryTotalPoolLiquidityResponse>(
+            &QueryRequest::<Empty>::Stargate {
+                path: "/osmosis.gamm.v1beta1.Query/TotalPoolLiquidity".to_string(),
+                data: (QueryTotalPoolLiquidityRequest {
+                    pool_id: route_part.pool_id,
+                })
+                .into(),
+            },
+        );
+
+        if !r?.liquidity.iter().any(|coin| coin.denom == current_denom) {
             return Result::Err(ContractError::InvalidPoolRoute {});
         }
 

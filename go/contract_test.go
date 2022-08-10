@@ -29,7 +29,7 @@ func (suite *KeeperTestSuite) TestSetRoutes() {
 			setRouteMsg: ExecuteMsg{SetRoute: &SetRoute{
 				InputDenom:  "uosmo",
 				OutputDenom: "token1",
-				PoolRoute: []gammtypes.SwapAmountInRoute{gammtypes.SwapAmountInRoute{
+				PoolRoute: []gammtypes.SwapAmountInRoute{{
 					PoolId:        1,
 					TokenOutDenom: "token1",
 				}},
@@ -42,7 +42,7 @@ func (suite *KeeperTestSuite) TestSetRoutes() {
 			setRouteMsg: ExecuteMsg{SetRoute: &SetRoute{
 				InputDenom:  "uosmo",
 				OutputDenom: "token1",
-				PoolRoute: []gammtypes.SwapAmountInRoute{gammtypes.SwapAmountInRoute{
+				PoolRoute: []gammtypes.SwapAmountInRoute{{
 					PoolId:        1,
 					TokenOutDenom: "token1",
 				}},
@@ -55,7 +55,7 @@ func (suite *KeeperTestSuite) TestSetRoutes() {
 			setRouteMsg: ExecuteMsg{SetRoute: &SetRoute{
 				InputDenom:  "uosmo",
 				OutputDenom: "token1",
-				PoolRoute: []gammtypes.SwapAmountInRoute{gammtypes.SwapAmountInRoute{
+				PoolRoute: []gammtypes.SwapAmountInRoute{{
 					PoolId:        1,
 					TokenOutDenom: "token1",
 				}},
@@ -68,7 +68,7 @@ func (suite *KeeperTestSuite) TestSetRoutes() {
 			setRouteMsg: ExecuteMsg{SetRoute: &SetRoute{
 				InputDenom:  "uosmo",
 				OutputDenom: "token1",
-				PoolRoute: []gammtypes.SwapAmountInRoute{gammtypes.SwapAmountInRoute{
+				PoolRoute: []gammtypes.SwapAmountInRoute{{
 					PoolId:        1,
 					TokenOutDenom: "uosmo",
 				}},
@@ -81,13 +81,15 @@ func (suite *KeeperTestSuite) TestSetRoutes() {
 			setRouteMsg: ExecuteMsg{SetRoute: &SetRoute{
 				InputDenom:  "token1",
 				OutputDenom: "token2",
-				PoolRoute: []gammtypes.SwapAmountInRoute{gammtypes.SwapAmountInRoute{
-					PoolId:        1,
-					TokenOutDenom: "uosmo",
-				}, gammtypes.SwapAmountInRoute{
-					PoolId:        2,
-					TokenOutDenom: "token2",
-				}},
+				PoolRoute: []gammtypes.SwapAmountInRoute{
+					{
+						PoolId:        1,
+						TokenOutDenom: "uosmo",
+					},
+					{
+						PoolId:        2,
+						TokenOutDenom: "token2",
+					}},
 			}},
 			sender:     suite.TestAccs[0],
 			expectPass: true,
