@@ -9,10 +9,10 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Failed Swap")]
-    InvalidPoolRoute {},
+    #[error("Invalid Pool Route: {reason:?}")]
+    InvalidPoolRoute { reason: String },
 
-    #[error("Failed Swap")]
+    #[error("Failed Swap: {reason:?}")]
     FailedSwap { reason: String },
 
     #[error("Custom Error val: {val:?}")]

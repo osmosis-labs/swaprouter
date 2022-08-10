@@ -19,8 +19,8 @@ import (
 )
 
 var (
-	// wasmFile = "../target/wasm32-unknown-unknown/release/cw_usdc.wasm"
-	wasmFile = "../artifacts/swaprouter.wasm"
+	wasmFile = "../target/wasm32-unknown-unknown/release/swaprouter.wasm"
+	// wasmFile = "../artifacts/swaprouter.wasm"
 )
 
 type KeeperTestSuite struct {
