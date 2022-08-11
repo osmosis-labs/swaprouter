@@ -1,12 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    coin, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::execute::{handle_swap_reply, set_route};
+use crate::execute::{handle_swap_reply, set_route, trade_with_slippage_limit};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::query::{query_owner, query_route};
 use crate::state::{State, STATE, SWAP_REPLY_STATES};
@@ -41,7 +41,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -51,6 +51,17 @@ pub fn execute(
             output_denom,
             pool_route,
         } => set_route(deps, info, input_denom, output_denom, pool_route),
+        ExecuteMsg::Swap {
+            input_coin,
+            output_denom,
+            minimum_output_amount,
+        } => trade_with_slippage_limit(
+            deps,
+            env,
+            info,
+            input_coin,
+            coin(minimum_output_amount.u128(), output_denom),
+        ),
     }
 }
 

@@ -1,3 +1,4 @@
+use cosmwasm_std::{Coin, Uint128, Uint256};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,11 @@ pub enum ExecuteMsg {
         input_denom: String,
         output_denom: String,
         pool_route: Vec<SwapAmountInRoute>,
+    },
+    Swap {
+        input_coin: Coin,
+        output_denom: String,
+        minimum_output_amount: Uint128,
     },
 }
 

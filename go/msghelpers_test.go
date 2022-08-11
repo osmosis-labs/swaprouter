@@ -6,6 +6,9 @@ import (
 	"regexp"
 
 	gammtypes "github.com/osmosis-labs/osmosis/v10/x/gamm/types"
+
+	cwmath "github.com/cosmwasm/cosmwasm-go/std/math"
+	cwtypes "github.com/cosmwasm/cosmwasm-go/std/types"
 )
 
 // Regexp definitions
@@ -38,12 +41,19 @@ type InstantiateMsg struct {
 
 type ExecuteMsg struct {
 	SetRoute *SetRoute `json:"set_route,omitempty"`
+	Swap     *Swap     `json:"swap,omitempty"`
 }
 
 type SetRoute struct {
 	InputDenom  string                        `json:"input_denom"`
 	OutputDenom string                        `json:"output_denom"`
 	PoolRoute   []gammtypes.SwapAmountInRoute `json:"pool_route"`
+}
+
+type Swap struct {
+	InputCoin           cwtypes.Coin   `json:"input_coin"`
+	OutputDenom         string         `json:"output_denom"`
+	MinimumOutputAmount cwmath.Uint128 `json:"minimum_output_amount"`
 }
 
 type QueryMsg struct {
