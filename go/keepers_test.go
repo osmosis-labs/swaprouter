@@ -28,10 +28,11 @@ var (
 type KeeperTestSuite struct {
 	apptesting.KeeperTestHelper
 
-	queryClient    types.QueryClient
-	msgServer      types.MsgServer
-	contractKeeper wasmtypes.ContractOpsKeeper
-	bankMsgServer  banktypes.MsgServer
+	queryClient         types.QueryClient
+	msgServer           types.MsgServer
+	contractKeeper      wasmtypes.ContractOpsKeeper
+	contractQueryKeeper wasmtypes.ViewKeeper
+	bankMsgServer       banktypes.MsgServer
 
 	codeId uint64
 }
@@ -93,7 +94,9 @@ func (suite *KeeperTestSuite) SetupTest() {
 	}
 
 	// setup contract keeper
-	suite.contractKeeper = wasmkeeper.NewPermissionedKeeper(suite.App.WasmKeeper, SudoAuthorizationPolicy{})
+	wasmPermissionedKeeper := wasmkeeper.NewPermissionedKeeper(suite.App.WasmKeeper, SudoAuthorizationPolicy{})
+	suite.contractKeeper = wasmPermissionedKeeper
+	suite.contractQueryKeeper = suite.App.WasmKeeper
 
 	// suite.queryClient = types.NewQueryClient(suite.QueryHelper)
 	// suite.msgServer = keeper.NewMsgServerImpl(*suite.App.TokenFactoryKeeper)

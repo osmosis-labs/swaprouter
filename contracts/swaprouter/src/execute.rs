@@ -2,15 +2,15 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    BankMsg, Coin, coins, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128,
+    coins, has_coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
 
 use crate::contract::SWAP_REPLY_ID;
 use crate::error::ContractError;
 use crate::helpers::{check_is_contract_owner, generate_swap_msg, validate_pool_route};
-use crate::state::{ROUTING_TABLE, SWAP_REPLY_STATES, SwapMsgReplyState};
+use crate::state::{SwapMsgReplyState, ROUTING_TABLE, SWAP_REPLY_STATES};
 
 pub fn set_route(
     deps: DepsMut,
@@ -43,6 +43,10 @@ pub fn trade_with_slippage_limit(
     input_token: Coin,
     min_output_token: Coin,
 ) -> Result<Response, ContractError> {
+    if !has_coins(&info.funds, &input_token) {
+        return Err(ContractError::InsufficientFunds {});
+    }
+
     // generate the swap_msg
     let swap_msg = generate_swap_msg(
         deps.as_ref(),
@@ -91,7 +95,9 @@ pub fn handle_swap_reply(
             amount: coins(amount.u128(), send_denom),
         };
 
-        return Ok(Response::new().add_message(bank_msg));
+        return Ok(Response::new()
+            .add_message(bank_msg)
+            .add_attribute("token_out_amount", amount));
     }
 
     Err(ContractError::FailedSwap {
