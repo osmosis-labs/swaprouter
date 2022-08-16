@@ -2,8 +2,7 @@ use std::marker::PhantomData;
 
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    to_binary, Coin, ContractResult, OwnedDeps, SystemError,
-    SystemResult, Uint128,
+    to_binary, Coin, ContractResult, OwnedDeps, SystemError, SystemResult, Uint128,
 };
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 

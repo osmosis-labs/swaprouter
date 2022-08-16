@@ -1,1 +1,13 @@
-{}
+{
+  "testnet": {
+    "swaprouter": {
+      "code_id": 717,
+      "addresses": {
+        "default": "osmo120en3ww06t8s7z0tmfvjqdzp959phvcwwghg59czwusxupdf4vwq5p650p"
+      },
+      "proposal": {
+        "store_code": null
+      }
+    }
+  }
+}
