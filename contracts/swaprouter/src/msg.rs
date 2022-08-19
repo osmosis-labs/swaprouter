@@ -1,4 +1,6 @@
-use cosmwasm_std::{Coin, Uint128, Uint256};
+use std::time::Duration;
+
+use cosmwasm_std::{Coin, Decimal, Uint128, Uint256};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -20,6 +22,12 @@ pub enum ExecuteMsg {
         input_coin: Coin,
         output_denom: String,
         minimum_output_amount: Uint128,
+    },
+    SwapTwapBounded {
+        input_coin: Coin,
+        output_denom: String,
+        minimum_off_twap: Decimal,
+        twap_duration: Duration,
     },
 }
 

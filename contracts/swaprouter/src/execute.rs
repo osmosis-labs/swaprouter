@@ -2,14 +2,15 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    coins, has_coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, SubMsg,
+    coins, has_coins, BankMsg, Coin, Decimal, DepsMut, Env, MessageInfo, Reply, Response, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128,
 };
+use osmo_bindings::OsmosisQuery;
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
 
 use crate::contract::SWAP_REPLY_ID;
 use crate::error::ContractError;
-use crate::helpers::{check_is_contract_owner, generate_swap_msg, validate_pool_route};
+use crate::helpers::{self, check_is_contract_owner, generate_swap_msg, validate_pool_route};
 use crate::state::{SwapMsgReplyState, ROUTING_TABLE, SWAP_REPLY_STATES};
 
 pub fn set_route(
@@ -34,6 +35,26 @@ pub fn set_route(
     Ok(Response::new().add_attribute("action", "set_route"))
 
     // TODO: add more attributes
+}
+
+pub fn trade_with_twap_limit(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    input_token: Coin,
+    output_denom: String,
+    minimum_off_twap: Decimal,
+) -> Result<Response, ContractError> {
+    let from_time = env.block.time.minus_seconds(300);
+
+    let depsref = deps.as_ref();
+
+    helpers::get_multihop_twap(
+        depsref::<OsmosisQuery>,
+        input_token.denom,
+        output_denom,
+        from_time,
+    );
 }
 
 pub fn trade_with_slippage_limit(

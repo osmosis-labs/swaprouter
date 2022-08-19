@@ -1,8 +1,13 @@
-use cosmwasm_std::{Addr, Coin, Deps};
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
-    SwapAmountInRoute,
+use cosmwasm_std::{Addr, Coin, Decimal, Deps, Timestamp};
+use osmosis_std::types::osmosis::{
+    self,
+    gamm::v1beta1::{
+        MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
+        SwapAmountInRoute,
+    },
 };
+
+use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
 
 use crate::{
     state::{ROUTING_TABLE, STATE},
@@ -66,6 +71,36 @@ pub fn validate_pool_route(
     }
 
     Ok(())
+}
+
+pub fn get_multihop_twap(
+    deps: Deps<OsmosisQuery>,
+    input_denom: String,
+    output_denom: String,
+    start_time: Timestamp,
+) -> Result<Decimal, ContractError> {
+    let route = ROUTING_TABLE.load(deps.storage, (&input_denom, &output_denom))?;
+
+    let querier = OsmosisQuerier::new(&deps.querier);
+    let start_time_unix: i64 = start_time.nanos() as i64;
+
+    let mut twap_price: Decimal = Decimal::one();
+    let quote_denom = input_denom;
+
+    for route_part in route {
+        let response = querier
+            .arithmetic_twap_to_now(
+                route_part.pool_id,
+                quote_denom.clone(),
+                route_part.token_out_denom,
+                start_time_unix,
+            )
+            .unwrap(); // TODO fix unwrap
+
+        twap_price = twap_price.checked_mul(response.twap).unwrap(); // TODO fix unwrap
+    }
+
+    Ok(twap_price)
 }
 
 pub fn generate_swap_msg(
