@@ -2,7 +2,6 @@ use std::{io, path::PathBuf};
 
 use cosmwasm_std::Coin;
 
-use memoize::memoize;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::{
     account::{Account, SigningAccount},
