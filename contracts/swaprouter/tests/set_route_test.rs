@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{io, path::PathBuf};
 
 use cosmwasm_std::Coin;
-use serial_test::serial;
 
+use memoize::memoize;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::{
     account::{Account, SigningAccount},
@@ -190,7 +190,6 @@ test_set_route!(
 macro_rules! test_set_route {
     ($test_name:ident should failed_with $err:expr, sender = @owner, msg = $msg:expr) => {
         #[test]
-        #[serial]
         fn $test_name() {
             let (app, contract_address, owner) = setup_test();
             let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
@@ -199,29 +198,28 @@ macro_rules! test_set_route {
     };
     ($test_name:ident should succeed, sender = @owner, msg = $msg:expr) => {
         #[test]
-        #[serial]
         fn $test_name() {
             let (app, contract_address, owner) = setup_test();
             let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
             assert!(res.is_ok(), "{}", res.unwrap_err());
 
-            // if let ExecuteMsg::SetRoute {
-            //     input_denom,
-            //     output_denom,
-            //     ..
-            // } = $msg {
-            //     let query_res: GetRouteResponse = app.query_contract(
-            //         &contract_address,
-            //         &QueryMsg::GetRoute {
-            //             input_denom,
-            //             output_denom,
-            //         },
-            //     );
-
-            //     dbg!(query_res);
-            // } else {
-            //     panic!("ExecuteMsg must be `SetRoute`");
-            // }
+            if let ExecuteMsg::SetRoute {
+                input_denom,
+                output_denom,
+                ..
+            } = $msg
+            {
+                // expect no panic
+                let _: GetRouteResponse = app.query_contract(
+                    &contract_address,
+                    &QueryMsg::GetRoute {
+                        input_denom,
+                        output_denom,
+                    },
+                );
+            } else {
+                panic!("ExecuteMsg must be `SetRoute`");
+            }
         }
     };
 
@@ -268,17 +266,7 @@ fn setup_test() -> (App, String, SigningAccount) {
         &[Coin::new(1_000, "uatom"), Coin::new(1_000, "uion")],
     );
 
-    let wasm_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .join("target")
-        .join("wasm32-unknown-unknown")
-        .join("release")
-        .join("swaprouter.wasm");
-
-    let code_id = app
-        .store_code_from_path(&owner.address(), wasm_path)
-        .unwrap();
+    let code_id = app.store_code(&owner.address(), &get_wasm());
 
     let contract_address = app.instantiate_contract(
         &owner,
@@ -292,4 +280,16 @@ fn setup_test() -> (App, String, SigningAccount) {
     );
 
     (app, contract_address, owner)
+}
+
+// #[memoize]
+fn get_wasm() -> Vec<u8> {
+    let wasm_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("target")
+        .join("wasm32-unknown-unknown")
+        .join("release")
+        .join("swaprouter.wasm");
+    std::fs::read(wasm_path).unwrap()
 }
