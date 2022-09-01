@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use cosmwasm_std::Coin;
+use serial_test::serial;
 
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::{
@@ -189,6 +190,7 @@ test_set_route!(
 macro_rules! test_set_route {
     ($test_name:ident should failed_with $err:expr, sender = @owner, msg = $msg:expr) => {
         #[test]
+        #[serial]
         fn $test_name() {
             let (app, contract_address, owner) = setup_test();
             let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
@@ -197,6 +199,7 @@ macro_rules! test_set_route {
     };
     ($test_name:ident should succeed, sender = @owner, msg = $msg:expr) => {
         #[test]
+        #[serial]
         fn $test_name() {
             let (app, contract_address, owner) = setup_test();
             let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
@@ -206,8 +209,7 @@ macro_rules! test_set_route {
             //     input_denom,
             //     output_denom,
             //     ..
-            // } = $msg
-            // {
+            // } = $msg {
             //     let query_res: GetRouteResponse = app.query_contract(
             //         &contract_address,
             //         &QueryMsg::GetRoute {
