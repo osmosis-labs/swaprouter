@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    coins, has_coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, SubMsg,
+    coins, has_coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, StdError, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
