@@ -1,13 +1,9 @@
-use std::{io, path::PathBuf};
-
+mod common;
+use common::*;
 use cosmwasm_std::Coin;
-
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
-use osmosis_testing::{
-    account::{Account, SigningAccount},
-    app::App,
-};
-use swaprouter::msg::{ExecuteMsg, GetRouteResponse, InstantiateMsg, QueryMsg};
+use osmosis_testing::account::Account;
+use swaprouter::msg::{ExecuteMsg, GetRouteResponse, QueryMsg};
 
 test_set_route!(
     set_initial_route_by_non_owner
@@ -190,7 +186,7 @@ macro_rules! test_set_route {
     ($test_name:ident should failed_with $err:expr, sender = @owner, msg = $msg:expr) => {
         #[test]
         fn $test_name() {
-            let (app, contract_address, owner) = setup_test();
+            let (app, contract_address, owner) = setup_test_env();
             let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
             assert_eq!(res.unwrap_err(), $err);
         }
@@ -198,7 +194,7 @@ macro_rules! test_set_route {
     ($test_name:ident should succeed, sender = @owner, msg = $msg:expr) => {
         #[test]
         fn $test_name() {
-            let (app, contract_address, owner) = setup_test();
+            let (app, contract_address, owner) = setup_test_env();
             let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
             assert!(res.is_ok(), "{}", res.unwrap_err());
 
@@ -208,14 +204,14 @@ macro_rules! test_set_route {
                 ..
             } = $msg
             {
-                // expect no panic
-                let _: GetRouteResponse = app.query_contract(
-                    &contract_address,
-                    &QueryMsg::GetRoute {
-                        input_denom,
-                        output_denom,
-                    },
-                );
+                let query = QueryMsg::GetRoute {
+                    input_denom: input_denom.clone(),
+                    output_denom: output_denom.clone(),
+                };
+
+                let _: GetRouteResponse = app
+                    .query_contract(&contract_address, &query)
+                    .expect(&format!("Query with `{:?}` must succeed", query));
             } else {
                 panic!("ExecuteMsg must be `SetRoute`");
             }
@@ -225,7 +221,7 @@ macro_rules! test_set_route {
     ($test_name:ident should failed_with $err:expr, sender = @non_owner, msg = $msg:expr) => {
         #[test]
         fn $test_name() {
-            let (app, contract_address, _) = setup_test();
+            let (app, contract_address, _) = setup_test_env();
 
             let initial_balance = [
                 Coin::new(1_000_000_000_000, "uosmo"),
@@ -238,57 +234,4 @@ macro_rules! test_set_route {
             assert_eq!(res.unwrap_err(), $err);
         }
     };
-}
-
-fn setup_test() -> (App, String, SigningAccount) {
-    let app = App::new();
-
-    // setup owner account
-    let initial_balance = [
-        Coin::new(1_000_000_000_000, "uosmo"),
-        Coin::new(1_000_000_000_000, "uion"),
-        Coin::new(1_000_000_000_000, "uatom"),
-    ];
-    let owner = app.init_account(&initial_balance);
-
-    // create pools
-    app.create_basic_pool(
-        &owner.address(),
-        &[Coin::new(1_000, "uion"), Coin::new(1_000, "uosmo")],
-    );
-    app.create_basic_pool(
-        &owner.address(),
-        &[Coin::new(1_000, "uatom"), Coin::new(1_000, "uosmo")],
-    );
-    app.create_basic_pool(
-        &owner.address(),
-        &[Coin::new(1_000, "uatom"), Coin::new(1_000, "uion")],
-    );
-
-    let code_id = app.store_code(&owner.address(), &get_wasm());
-
-    let contract_address = app.instantiate_contract(
-        &owner,
-        code_id,
-        &InstantiateMsg {
-            owner: owner.address(),
-        },
-        &[],
-        Some(&owner),
-        None,
-    );
-
-    (app, contract_address, owner)
-}
-
-// #[memoize]
-fn get_wasm() -> Vec<u8> {
-    let wasm_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .join("target")
-        .join("wasm32-unknown-unknown")
-        .join("release")
-        .join("swaprouter.wasm");
-    std::fs::read(wasm_path).unwrap()
 }
