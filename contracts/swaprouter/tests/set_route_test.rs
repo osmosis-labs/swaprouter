@@ -183,14 +183,6 @@ test_set_route!(
 
 #[macro_export]
 macro_rules! test_set_route {
-    ($test_name:ident should failed_with $err:expr, sender = @owner, msg = $msg:expr) => {
-        #[test]
-        fn $test_name() {
-            let (app, contract_address, owner) = setup_test_env();
-            let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
-            assert_eq!(res.unwrap_err(), $err);
-        }
-    };
     ($test_name:ident should succeed, sender = @owner, msg = $msg:expr) => {
         #[test]
         fn $test_name() {
@@ -198,6 +190,7 @@ macro_rules! test_set_route {
             let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
             assert!(res.is_ok(), "{}", res.unwrap_err());
 
+            // check if set route can be queried correctly
             if let ExecuteMsg::SetRoute {
                 input_denom,
                 output_denom,
@@ -218,19 +211,23 @@ macro_rules! test_set_route {
         }
     };
 
-    ($test_name:ident should failed_with $err:expr, sender = @non_owner, msg = $msg:expr) => {
+    ($test_name:ident should failed_with $err:expr, sender = @$sender:ident, msg = $msg:expr) => {
         #[test]
         fn $test_name() {
-            let (app, contract_address, _) = setup_test_env();
+            let (app, contract_address, owner) = setup_test_env();
 
-            let initial_balance = [
-                Coin::new(1_000_000_000_000, "uosmo"),
-                Coin::new(1_000_000_000_000, "uion"),
-                Coin::new(1_000_000_000_000, "uatom"),
-            ];
-            let non_owner = app.init_account(&initial_balance);
+            let sender = if stringify!($sender) == "owner" {
+                owner
+            } else {
+                let initial_balance = [
+                    Coin::new(1_000_000_000_000, "uosmo"),
+                    Coin::new(1_000_000_000_000, "uion"),
+                    Coin::new(1_000_000_000_000, "uatom"),
+                ];
+                app.init_account(&initial_balance)
+            };
 
-            let res = app.execute_contract(&non_owner.address(), &contract_address, &$msg, &[]);
+            let res = app.execute_contract(&sender.address(), &contract_address, &$msg, &[]);
             assert_eq!(res.unwrap_err(), $err);
         }
     };
