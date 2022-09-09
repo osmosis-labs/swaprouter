@@ -3,12 +3,17 @@ use std::path::PathBuf;
 use cosmwasm_std::Coin;
 use osmosis_testing::{
     account::{Account, SigningAccount},
-    app::App,
 };
+use osmosis_testing::runner::app::App;
+use osmosis_testing::x::AsModule;
+use osmosis_testing::x::gamm::Gamm;
+use osmosis_testing::x::wasm::Wasm;
 use swaprouter::msg::InstantiateMsg;
 
 pub fn setup_test_env() -> (App, String, SigningAccount) {
     let app = App::new();
+    let gamm = app.as_module::<Gamm<_>>();
+    let wasm = app.as_module::<Wasm<_>>();
 
     // setup owner account
     let initial_balance = [
@@ -16,34 +21,34 @@ pub fn setup_test_env() -> (App, String, SigningAccount) {
         Coin::new(1_000_000_000_000, "uion"),
         Coin::new(1_000_000_000_000, "uatom"),
     ];
-    let owner = app.init_account(&initial_balance);
+    let owner = app.init_account(&initial_balance).unwrap();
 
     // create pools
-    app.create_basic_pool(
-        &owner.address(),
+    gamm.create_basic_pool(
         &[Coin::new(1_000, "uion"), Coin::new(1_000, "uosmo")],
-    );
-    app.create_basic_pool(
-        &owner.address(),
+        &owner
+    ).unwrap();
+    gamm.create_basic_pool(
         &[Coin::new(1_000, "uatom"), Coin::new(1_000, "uosmo")],
-    );
-    app.create_basic_pool(
-        &owner.address(),
+        &owner
+    ).unwrap();
+    gamm.create_basic_pool(
         &[Coin::new(1_000, "uatom"), Coin::new(1_000, "uion")],
-    );
+        &owner
+    ).unwrap();
 
-    let code_id = app.store_code(&owner.address(), &get_wasm());
+    let code_id = wasm.store_code( &get_wasm(), None, &owner).unwrap().data.code_id;
 
-    let contract_address = app.instantiate_contract(
-        &owner,
+    let contract_address = wasm.instantiate(
         code_id,
         &InstantiateMsg {
             owner: owner.address(),
         },
-        &[],
-        Some(&owner),
+        Some(&owner.address()),
         None,
-    );
+        &[],
+        &owner,
+    ).unwrap().data.address;
 
     (app, contract_address, owner)
 }

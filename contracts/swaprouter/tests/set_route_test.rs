@@ -2,7 +2,9 @@ mod common;
 use common::*;
 use cosmwasm_std::Coin;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
-use osmosis_testing::account::Account;
+use osmosis_testing::x::wasm::Wasm;
+use osmosis_testing::x::Module;
+use osmosis_testing::runner::error::RunnerError;
 use swaprouter::msg::{ExecuteMsg, GetRouteResponse, QueryMsg};
 
 test_set_route!(
@@ -187,7 +189,8 @@ macro_rules! test_set_route {
         #[test]
         fn $test_name() {
             let (app, contract_address, owner) = setup_test_env();
-            let res = app.execute_contract(&owner.address(), &contract_address, &$msg, &[]);
+            let wasm = Wasm::new(&app);
+            let res = wasm.execute(&contract_address, &$msg, &[], &owner);
             assert!(res.is_ok(), "{}", res.unwrap_err());
 
             // check if set route can be queried correctly
@@ -202,9 +205,9 @@ macro_rules! test_set_route {
                     output_denom: output_denom.clone(),
                 };
 
-                let _: GetRouteResponse = app
-                    .query_contract(&contract_address, &query)
-                    .expect(&format!("Query with `{:?}` must succeed", query));
+                let _ = wasm
+                    .query::<QueryMsg, GetRouteResponse>(&contract_address, &query);
+                    // .expect(&format!("Query with `{:?}` must succeed", query));
             } else {
                 panic!("ExecuteMsg must be `SetRoute`");
             }
@@ -215,6 +218,7 @@ macro_rules! test_set_route {
         #[test]
         fn $test_name() {
             let (app, contract_address, owner) = setup_test_env();
+            let wasm = Wasm::new(&app);
 
             let sender = if stringify!($sender) == "owner" {
                 owner
@@ -224,11 +228,18 @@ macro_rules! test_set_route {
                     Coin::new(1_000_000_000_000, "uion"),
                     Coin::new(1_000_000_000_000, "uatom"),
                 ];
-                app.init_account(&initial_balance)
+                app.init_account(&initial_balance).unwrap()
             };
 
-            let res = app.execute_contract(&sender.address(), &contract_address, &$msg, &[]);
-            assert_eq!(res.unwrap_err(), $err);
+            let res = wasm.execute::<ExecuteMsg>(&contract_address, &$msg, &[], &sender);
+            let err = res.unwrap_err();
+            if let RunnerError::AppError { msg } = &err {
+                let expected_err = &format!("failed to execute message; message index: 0: {}", $err);
+                assert_eq!(msg, expected_err);
+            } else {
+                panic!("unexpected error: {:?}", err);
+            }
+
         }
     };
 }

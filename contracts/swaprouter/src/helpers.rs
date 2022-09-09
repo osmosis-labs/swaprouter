@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Coin, Deps};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
+    MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest,
     SwapAmountInRoute,
 };
 

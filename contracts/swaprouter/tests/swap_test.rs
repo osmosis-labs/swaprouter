@@ -2,7 +2,11 @@ mod common;
 use common::*;
 use cosmwasm_std::Coin;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
-use osmosis_testing::{account::Account, app::App};
+use osmosis_testing::{account::Account, runner::app::App};
+use osmosis_testing::runner::error::RunnerError;
+use osmosis_testing::x::Module;
+use osmosis_testing::x::wasm::Wasm;
+use osmosis_testing::x::bank::Bank;
 use swaprouter::msg::ExecuteMsg;
 
 test_swap!(
@@ -90,7 +94,7 @@ macro_rules! test_swap {
         #[test]
         fn $test_name() {
             let res = setup_and_swap(&$msg, &$funds, &|_, _, _| {});
-            assert_eq!(res.unwrap_err(), $err);
+            assert_eq!(res.unwrap_err(), format!("failed to execute message; message index: 0: {}", $err));
         }
     };
 }
@@ -103,6 +107,7 @@ fn setup_and_swap(
     check: &dyn Fn(&App, &str, &ExecuteMsg),
 ) -> Result<String, String> {
     let (app, contract_address, owner) = setup_test_env();
+    let wasm = Wasm::new(&app);
 
     let initial_balance = [
         Coin::new(INITIAL_AMOUNT, "uosmo"),
@@ -110,7 +115,7 @@ fn setup_and_swap(
         Coin::new(INITIAL_AMOUNT, "uatom"),
     ];
 
-    let non_owner = app.init_account(&initial_balance);
+    let non_owner = app.init_account(&initial_balance).unwrap();
     let set_route_msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uion".to_string(),
@@ -125,17 +130,23 @@ fn setup_and_swap(
             },
         ],
     };
-    app.execute_contract(&owner.address(), &contract_address, &set_route_msg, &[])
+    wasm.execute(&contract_address,&set_route_msg,    &[], &owner)
         .expect("Setup route fixture must always succeed");
 
-    let res = app.execute_contract(&non_owner.address(), &contract_address, &msg, funds);
+    let res = wasm.execute(&contract_address, &msg, funds, &non_owner);
 
     check(&app, &non_owner.address(), msg);
-    res
+     res.map(|_| "".to_string()).map_err(|e| {
+        match e {
+            RunnerError::AppError { msg} => msg,
+            _ => panic!("unexpected error")
+        }
+    })
 }
 
 fn check_input_decreased_and_output_increased(app: &App, sender: &str, msg: &ExecuteMsg) {
-    let balances = app.get_all_balances(sender);
+    let bank = Bank::new(app);
+    let balances = bank.query_all_balances(sender, None).balances;
     if let ExecuteMsg::Swap {
         input_coin,
         output_denom,
@@ -152,11 +163,11 @@ fn check_input_decreased_and_output_increased(app: &App, sender: &str, msg: &Exe
             .unwrap();
 
         assert!(
-            input.amount < INITIAL_AMOUNT.into(),
+            input.amount.parse::<u128>().unwrap() < INITIAL_AMOUNT,
             "Input must be decreased after swap"
         );
         assert!(
-            output.amount > INITIAL_AMOUNT.into(),
+            output.amount.parse::<u128>().unwrap() > INITIAL_AMOUNT,
             "Output must be increased after swap"
         );
     } else {
