@@ -31,7 +31,7 @@ pub fn validate_pool_route(
         let liquidity = QueryTotalPoolLiquidityRequest {
             pool_id: route_part.pool_id,
         }
-        .query(deps.querier)?
+        .query(&deps.querier)?
         .liquidity;
 
         if !liquidity.iter().any(|coin| coin.denom == current_denom) {
