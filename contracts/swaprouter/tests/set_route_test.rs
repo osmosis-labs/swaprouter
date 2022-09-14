@@ -1,11 +1,11 @@
 mod test_env;
-use test_env::*;
 use cosmwasm_std::Coin;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::runner::error::RunnerError;
 use osmosis_testing::x::wasm::Wasm;
 use osmosis_testing::x::Module;
 use swaprouter::msg::{ExecuteMsg, GetRouteResponse, QueryMsg};
+use test_env::*;
 
 test_set_route!(
     set_initial_route_by_non_owner
