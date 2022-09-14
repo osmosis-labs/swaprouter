@@ -2,16 +2,16 @@ mod common;
 use common::*;
 use cosmwasm_std::Coin;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
+use osmosis_testing::runner::error::RunnerError;
 use osmosis_testing::x::wasm::Wasm;
 use osmosis_testing::x::Module;
-use osmosis_testing::runner::error::RunnerError;
 use swaprouter::msg::{ExecuteMsg, GetRouteResponse, QueryMsg};
 
 test_set_route!(
     set_initial_route_by_non_owner
     should failed_with "Unauthorized: execute wasm contract failed",
 
-    sender = @non_owner,
+    sender = NonOwner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uion".to_string(),
@@ -26,7 +26,7 @@ test_set_route!(
     set_initial_route_by_owner
     should succeed,
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uion".to_string(),
@@ -41,7 +41,7 @@ test_set_route!(
     override_route_with_multi_hop
     should succeed,
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uion".to_string(),
@@ -64,7 +64,7 @@ test_set_route!(
     r#"Invalid Pool Route: "last denom doesn't match": execute wasm contract failed"#,
     // r#"Invalid Pool Route: "denom uosmo is not in pool id 1": execute wasm contract failed"#,
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uion".to_string(),
@@ -82,7 +82,7 @@ test_set_route!(
     should failed_with
     r#"Invalid Pool Route: "denom uatom is not in pool id 1": execute wasm contract failed"#,
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uatom".to_string(),
         output_denom: "uion".to_string(),
@@ -103,7 +103,7 @@ test_set_route!(
     // > `denom uatom is not in pool id 1": execute wasm contract failed`
     // instead.
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uatom".to_string(),
@@ -124,7 +124,7 @@ test_set_route!(
     // > `denom foocoin is not in pool id 1": execute wasm contract failed`
     // instead.
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uatom".to_string(),
@@ -146,7 +146,7 @@ test_set_route!(
     should failed_with
     r#"Invalid Pool Route: "denom uion is not in pool id 2": execute wasm contract failed"#,
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uatom".to_string(),
@@ -168,7 +168,7 @@ test_set_route!(
     should failed_with
     r#"Invalid Pool Route: "denom uosmo is not in pool id 3": execute wasm contract failed"#,
 
-    sender = @owner,
+    sender = Owner,
     msg = ExecuteMsg::SetRoute {
         input_denom: "uosmo".to_string(),
         output_denom: "uatom".to_string(),
@@ -185,61 +185,91 @@ test_set_route!(
 
 #[macro_export]
 macro_rules! test_set_route {
-    ($test_name:ident should succeed, sender = @owner, msg = $msg:expr) => {
+    ($test_name:ident should succeed, sender = Owner, msg = $msg:expr) => {
         #[test]
         fn $test_name() {
-            let (app, contract_address, owner) = setup_test_env();
-            let wasm = Wasm::new(&app);
-            let res = wasm.execute(&contract_address, &$msg, &[], &owner);
-            assert!(res.is_ok(), "{}", res.unwrap_err());
-
-            // check if set route can be queried correctly
-            if let ExecuteMsg::SetRoute {
-                input_denom,
-                output_denom,
-                ..
-            } = $msg
-            {
-                let query = QueryMsg::GetRoute {
-                    input_denom: input_denom.clone(),
-                    output_denom: output_denom.clone(),
-                };
-
-                let _ = wasm
-                    .query::<QueryMsg, GetRouteResponse>(&contract_address, &query);
-                    // .expect(&format!("Query with `{:?}` must succeed", query));
-            } else {
-                panic!("ExecuteMsg must be `SetRoute`");
-            }
+            test_set_route_success_case($msg)
         }
     };
 
-    ($test_name:ident should failed_with $err:expr, sender = @$sender:ident, msg = $msg:expr) => {
+    ($test_name:ident should failed_with $err:expr, sender = $sender:ident, msg = $msg:expr) => {
         #[test]
         fn $test_name() {
-            let (app, contract_address, owner) = setup_test_env();
-            let wasm = Wasm::new(&app);
+            test_set_route_failed_case(Sender::$sender, $msg, $err)
+        }
+    };
+}
 
-            let sender = if stringify!($sender) == "owner" {
-                owner
-            } else {
-                let initial_balance = [
-                    Coin::new(1_000_000_000_000, "uosmo"),
-                    Coin::new(1_000_000_000_000, "uion"),
-                    Coin::new(1_000_000_000_000, "uatom"),
-                ];
-                app.init_account(&initial_balance).unwrap()
+enum Sender {
+    Owner,
+    NonOwner,
+}
+
+fn test_set_route_success_case(msg: ExecuteMsg) {
+    let TestEnv {
+        app,
+        contract_address,
+        owner,
+    } = TestEnv::new();
+    let wasm = Wasm::new(&app);
+    let res = wasm.execute(&contract_address, &msg, &[], &owner);
+
+    // check if execution succeeded
+    assert!(res.is_ok(), "{}", res.unwrap_err());
+
+    // check if previously set route can be queried correctly
+    match msg {
+        ExecuteMsg::SetRoute {
+            input_denom,
+            output_denom,
+            ..
+        } => {
+            let query = QueryMsg::GetRoute {
+                input_denom: input_denom.clone(),
+                output_denom: output_denom.clone(),
             };
 
-            let res = wasm.execute::<ExecuteMsg>(&contract_address, &$msg, &[], &sender);
-            let err = res.unwrap_err();
-            if let RunnerError::AppError { msg } = &err {
-                let expected_err = &format!("failed to execute message; message index: 0: {}", $err);
-                assert_eq!(msg, expected_err);
-            } else {
-                panic!("unexpected error: {:?}", err);
-            }
+            // expect route to always be found in this case`
+            let res = wasm.query::<QueryMsg, GetRouteResponse>(&contract_address, &query);
+            assert!(res.is_ok(), "{:?}", res.unwrap_err());
+        }
+        _ => {
+            panic!("ExecuteMsg must be `SetRoute`");
+        }
+    }
+}
 
+fn test_set_route_failed_case(sender: Sender, msg: ExecuteMsg, expected_error: &str) {
+    let TestEnv {
+        app,
+        contract_address,
+        owner,
+    } = TestEnv::new();
+    let wasm = Wasm::new(&app);
+
+    let sender = match sender {
+        Sender::Owner => owner,
+        Sender::NonOwner => {
+            let initial_balance = [
+                Coin::new(1_000_000_000_000, "uosmo"),
+                Coin::new(1_000_000_000_000, "uion"),
+                Coin::new(1_000_000_000_000, "uatom"),
+            ];
+            app.init_account(&initial_balance).unwrap()
         }
     };
+
+    let res = wasm.execute::<ExecuteMsg>(&contract_address, &msg, &[], &sender);
+    let err = res.unwrap_err();
+
+    // assert on error message
+    if let RunnerError::ExecuteError { msg } = &err {
+        let expected_err = &format!(
+            "failed to execute message; message index: 0: {}",
+            expected_error
+        );
+        assert_eq!(msg, expected_err);
+    } else {
+        panic!("unexpected error: {:?}", err);
+    }
 }
