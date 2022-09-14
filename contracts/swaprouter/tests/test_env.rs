@@ -73,7 +73,7 @@ impl TestEnv {
     }
 }
 
-pub fn get_wasm() -> Vec<u8> {
+fn get_wasm() -> Vec<u8> {
     let wasm_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
