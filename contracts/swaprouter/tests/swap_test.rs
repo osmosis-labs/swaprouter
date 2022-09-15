@@ -1,14 +1,8 @@
 mod test_env;
 use cosmwasm_std::Coin;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
-use osmosis_testing::account::SigningAccount;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-use osmosis_testing::runner::error::RunnerError;
-use osmosis_testing::runner::result::RunnerExecuteResult;
-use osmosis_testing::x::bank::Bank;
-use osmosis_testing::x::wasm::Wasm;
-use osmosis_testing::x::Module;
-use osmosis_testing::{account::Account, cosmrs, runner::app::App};
+use osmosis_testing::{Module, Bank, Wasm, Account, SigningAccount, RunnerError, RunnerExecuteResult, OsmosisTestApp};
 use swaprouter::msg::ExecuteMsg;
 use test_env::*;
 
@@ -125,7 +119,7 @@ fn setup_route_and_execute_swap(
     msg: &ExecuteMsg,
     funds: &[Coin],
 ) -> (
-    App,
+    OsmosisTestApp,
     SigningAccount,
     RunnerExecuteResult<MsgExecuteContractResponse>,
 ) {
@@ -174,7 +168,7 @@ fn setup_route_and_execute_swap(
     (app, sender, res)
 }
 
-fn assert_input_decreased_and_output_increased(app: &App, sender: &str, msg: &ExecuteMsg) {
+fn assert_input_decreased_and_output_increased(app: &OsmosisTestApp, sender: &str, msg: &ExecuteMsg) {
     let bank = Bank::new(app);
     let balances = bank.query_all_balances(sender, None).unwrap().balances;
     match msg {
@@ -201,7 +195,7 @@ fn assert_input_decreased_and_output_increased(app: &App, sender: &str, msg: &Ex
     }
 }
 
-fn get_amount(balances: &Vec<cosmrs::proto::cosmos::base::v1beta1::Coin>, denom: &str) -> u128 {
+fn get_amount(balances: &Vec<osmosis_testing::cosmrs::proto::cosmos::base::v1beta1::Coin>, denom: &str) -> u128 {
     balances
         .iter()
         .find(|b| b.denom == denom)

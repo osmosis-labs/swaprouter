@@ -1,23 +1,20 @@
 use std::path::PathBuf;
 
 use cosmwasm_std::Coin;
-use osmosis_testing::account::{Account, SigningAccount};
-use osmosis_testing::runner::app::App;
-use osmosis_testing::x::gamm::Gamm;
-use osmosis_testing::x::wasm::Wasm;
-use osmosis_testing::x::AsModule;
+use osmosis_testing::{OsmosisTestApp, Account, SigningAccount};
+use osmosis_testing::{Module, Gamm, Wasm};
 use swaprouter::msg::InstantiateMsg;
 
 pub struct TestEnv {
-    pub app: App,
+    pub app: OsmosisTestApp,
     pub contract_address: String,
     pub owner: SigningAccount,
 }
 impl TestEnv {
     pub fn new() -> Self {
-        let app = App::new();
-        let gamm = app.as_module::<Gamm<_>>();
-        let wasm = app.as_module::<Wasm<_>>();
+        let app = OsmosisTestApp::new();
+        let gamm = Gamm::new(&app);
+        let wasm = Wasm::new(&app);
 
         // setup owner account
         let initial_balance = [

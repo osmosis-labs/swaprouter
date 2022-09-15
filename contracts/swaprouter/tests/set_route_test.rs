@@ -1,9 +1,7 @@
 mod test_env;
 use cosmwasm_std::Coin;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
-use osmosis_testing::runner::error::RunnerError;
-use osmosis_testing::x::wasm::Wasm;
-use osmosis_testing::x::Module;
+use osmosis_testing::{Module, Wasm, RunnerError};
 use swaprouter::msg::{ExecuteMsg, GetRouteResponse, QueryMsg};
 use test_env::*;
 
