@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin, Uint128, Uint256};
+use cosmwasm_std::{Coin, Uint128};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
