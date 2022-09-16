@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use cosmwasm_std::Coin;
-use osmosis_testing::{OsmosisTestApp, Account, SigningAccount};
-use osmosis_testing::{Module, Gamm, Wasm};
+use osmosis_testing::{Account, OsmosisTestApp, SigningAccount};
+use osmosis_testing::{Gamm, Module, Wasm};
 use swaprouter::msg::InstantiateMsg;
 
 pub struct TestEnv {
