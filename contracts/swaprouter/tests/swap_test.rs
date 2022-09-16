@@ -2,8 +2,10 @@ mod test_env;
 use cosmwasm_std::Coin;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-use osmosis_testing::{Module, Bank, Wasm, Account, SigningAccount, RunnerError, RunnerExecuteResult, OsmosisTestApp};
-use swaprouter::msg::ExecuteMsg;
+use osmosis_testing::{
+    Account, Bank, Module, OsmosisTestApp, RunnerError, RunnerExecuteResult, SigningAccount, Wasm,
+};
+use swaprouter::msg::{ExecuteMsg, Slipage};
 use test_env::*;
 
 test_swap!(
@@ -13,7 +15,7 @@ test_swap!(
     msg = ExecuteMsg::Swap {
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
-        minimum_output_amount: 1u128.into()
+        slipage: Slipage::MinOutputAmount(1u128.into()),
     },
     funds: [
         Coin::new(1000, "uosmo")
@@ -27,7 +29,7 @@ test_swap!(
     msg = ExecuteMsg::Swap {
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
-        minimum_output_amount: 1u128.into()
+        slipage: Slipage::MinOutputAmount(1u128.into()),
     },
     funds: [
         Coin::new(10, "uosmo")
@@ -41,7 +43,7 @@ test_swap!(
     msg = ExecuteMsg::Swap {
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
-        minimum_output_amount: 1u128.into()
+        slipage: Slipage::MinOutputAmount(1u128.into()),
     },
     funds: [
         Coin::new(10, "uion")
@@ -55,7 +57,7 @@ test_swap!(
     msg = ExecuteMsg::Swap {
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
-        minimum_output_amount: 1000000000000000000000000u128.into()
+        slipage: Slipage::MinOutputAmount(1000000000000000000000000u128.into()),
     },
     funds: [
         Coin::new(1000, "uosmo")
@@ -69,7 +71,7 @@ test_swap!(
     msg = ExecuteMsg::Swap {
         input_coin: Coin::new(1000, "uion"),
         output_denom: "uosmo".to_string(),
-        minimum_output_amount: 1000000000000000000000000u128.into()
+        slipage: Slipage::MinOutputAmount(1000000000000000000000000u128.into()),
     },
     funds: [
         Coin::new(1000, "uion")
@@ -168,7 +170,11 @@ fn setup_route_and_execute_swap(
     (app, sender, res)
 }
 
-fn assert_input_decreased_and_output_increased(app: &OsmosisTestApp, sender: &str, msg: &ExecuteMsg) {
+fn assert_input_decreased_and_output_increased(
+    app: &OsmosisTestApp,
+    sender: &str,
+    msg: &ExecuteMsg,
+) {
     let bank = Bank::new(app);
     let balances = bank.query_all_balances(sender, None).unwrap().balances;
     match msg {
@@ -195,7 +201,10 @@ fn assert_input_decreased_and_output_increased(app: &OsmosisTestApp, sender: &st
     }
 }
 
-fn get_amount(balances: &Vec<osmosis_testing::cosmrs::proto::cosmos::base::v1beta1::Coin>, denom: &str) -> u128 {
+fn get_amount(
+    balances: &Vec<osmosis_testing::cosmrs::proto::cosmos::base::v1beta1::Coin>,
+    denom: &str,
+) -> u128 {
     balances
         .iter()
         .find(|b| b.denom == denom)

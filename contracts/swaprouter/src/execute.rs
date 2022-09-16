@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    coins, has_coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, SubMsg,
+    coin, coins, has_coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
@@ -10,6 +10,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, S
 use crate::contract::SWAP_REPLY_ID;
 use crate::error::ContractError;
 use crate::helpers::{check_is_contract_owner, generate_swap_msg, validate_pool_route};
+use crate::msg::Slipage;
 use crate::state::{SwapMsgReplyState, ROUTING_TABLE, SWAP_REPLY_STATES};
 
 pub fn set_route(
@@ -41,11 +42,21 @@ pub fn trade_with_slippage_limit(
     env: Env,
     info: MessageInfo,
     input_token: Coin,
-    min_output_token: Coin,
+    output_denom: String,
+    slipage: Slipage,
 ) -> Result<Response, ContractError> {
     if !has_coins(&info.funds, &input_token) {
         return Err(ContractError::InsufficientFunds {});
     }
+
+    let min_output_token = match slipage {
+        Slipage::MaxPriceImpactPercentage(_) => todo!(),
+        Slipage::MinOutputAmount(minimum_output_amount) => {
+            coin(minimum_output_amount.u128(), output_denom)
+        }
+    };
+
+    dbg!(&min_output_token);
 
     // generate the swap_msg
     let swap_msg = generate_swap_msg(

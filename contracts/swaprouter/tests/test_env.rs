@@ -78,5 +78,6 @@ fn get_wasm() -> Vec<u8> {
         .join("wasm32-unknown-unknown")
         .join("release")
         .join("swaprouter.wasm");
+    println!("PATH: {wasm_path:?}");
     std::fs::read(wasm_path).unwrap()
 }

@@ -1,9 +1,8 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr, DepsMut};
-use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 
 use crate::contract;
-use crate::msg::{ExecuteMsg, GetOwnerResponse, GetRouteResponse, InstantiateMsg, QueryMsg};
+use crate::msg::{GetOwnerResponse, InstantiateMsg, QueryMsg};
 
 static CREATOR_ADDRESS: &str = "creator";
 

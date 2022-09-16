@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -54,14 +54,8 @@ pub fn execute(
         ExecuteMsg::Swap {
             input_coin,
             output_denom,
-            minimum_output_amount,
-        } => trade_with_slippage_limit(
-            deps,
-            env,
-            info,
-            input_coin,
-            coin(minimum_output_amount.u128(), output_denom),
-        ),
+            slipage,
+        } => trade_with_slippage_limit(deps, env, info, input_coin, output_denom, slipage),
     }
 }
 
