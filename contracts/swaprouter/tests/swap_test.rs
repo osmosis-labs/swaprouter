@@ -1,5 +1,7 @@
 mod test_env;
-use cosmwasm_std::Coin;
+use std::str::FromStr;
+
+use cosmwasm_std::{Coin, Decimal};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
 use osmosis_testing::{
@@ -78,6 +80,20 @@ test_swap!(
     ]
 );
 
+test_swap!(
+    twap_based_swap
+    should succeed,
+
+    msg = ExecuteMsg::Swap {
+        input_coin: Coin::new(1000, "uosmo"),
+        output_denom: "uion".to_string(),
+        slipage: Slipage::MaxPriceImpactPercentage(Decimal::from_str("1.5").unwrap()),
+    },
+    funds: [
+        Coin::new(1000, "uosmo")
+    ]
+);
+
 // ======= helpers ========
 
 #[macro_export]
@@ -99,7 +115,8 @@ macro_rules! test_swap {
 const INITIAL_AMOUNT: u128 = 1_000_000_000_000;
 
 fn test_swap_success_case(msg: ExecuteMsg, funds: &[Coin]) {
-    let (app, sender, _res) = setup_route_and_execute_swap(&msg, &funds);
+    let (app, sender, res) = setup_route_and_execute_swap(&msg, &funds);
+    dbg!(res);
     assert_input_decreased_and_output_increased(&app, &sender.address(), &msg);
 }
 

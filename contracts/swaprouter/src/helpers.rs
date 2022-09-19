@@ -1,4 +1,8 @@
-use cosmwasm_std::{Addr, Coin, Deps};
+use std::ops::Mul;
+
+use cosmwasm_std::{Addr, Coin, Decimal, Deps, Timestamp, Uint128};
+use osmosis_std::shim::Timestamp as OsmosisTimestamp;
+use osmosis_std::types::osmosis::gamm::twap::v1beta1::TwapQuerier;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, SwapAmountInRoute,
 };
@@ -82,4 +86,56 @@ pub fn generate_swap_msg(
         token_in: Some(input_token.into()),
         token_out_min_amount: min_output_token.amount.to_string(),
     })
+}
+
+pub fn calculate_min_output_from_twap(
+    deps: Deps,
+    input_token: Coin,
+    output_denom: String,
+    now: Timestamp,
+    percentage_impact: Decimal,
+) -> Result<Coin, ContractError> {
+    // get trade route
+    let route = ROUTING_TABLE.load(deps.storage, (&input_token.denom, &output_denom))?;
+    if route.is_empty() {
+        return Err(ContractError::InvalidPoolRoute {
+            reason: format!("No route foung for {} -> {output_denom}", input_token.denom),
+        });
+    }
+
+    let mut twap_price: Decimal = Decimal::one();
+    let quote_denom = input_token.denom;
+
+    let start_time = now.minus_seconds(300);
+    let start_time = OsmosisTimestamp {
+        seconds: start_time.seconds() as i64,
+        nanos: start_time.nanos() as i32,
+    };
+
+    for route_part in route {
+        let twap = TwapQuerier::new(&deps.querier)
+            .get_arithmetic_twap(
+                route_part.pool_id,
+                quote_denom.clone(),
+                route_part.token_out_denom,
+                Some(start_time.clone()),
+                None,
+            )?
+            .arithmetic_twap;
+
+        let twap: Decimal = twap.parse().map_err(|_e| ContractError::CustomError {
+            val: "Invalid twap value received from the chain".to_string(),
+        })?;
+        twap_price =
+            twap_price
+                .checked_mul(twap.into())
+                .map_err(|_e| ContractError::CustomError {
+                    val: format!("Invalid value for twap price: {twap_price} * {twap}"),
+                })?;
+    }
+
+    let twap_price = twap_price + twap_price.mul(percentage_impact);
+    let twap_price: Uint128 = twap_price.atomics();
+
+    Ok(Coin::new(twap_price.into(), output_denom))
 }

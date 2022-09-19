@@ -9,7 +9,9 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, S
 
 use crate::contract::SWAP_REPLY_ID;
 use crate::error::ContractError;
-use crate::helpers::{check_is_contract_owner, generate_swap_msg, validate_pool_route};
+use crate::helpers::{
+    calculate_min_output_from_twap, check_is_contract_owner, generate_swap_msg, validate_pool_route,
+};
 use crate::msg::Slipage;
 use crate::state::{SwapMsgReplyState, ROUTING_TABLE, SWAP_REPLY_STATES};
 
@@ -49,8 +51,16 @@ pub fn trade_with_slippage_limit(
         return Err(ContractError::InsufficientFunds {});
     }
 
+    println!("HERE!");
+
     let min_output_token = match slipage {
-        Slipage::MaxPriceImpactPercentage(_) => todo!(),
+        Slipage::MaxPriceImpactPercentage(percentage) => calculate_min_output_from_twap(
+            deps.as_ref(),
+            input_token.clone(),
+            output_denom,
+            env.block.time,
+            percentage,
+        )?,
         Slipage::MinOutputAmount(minimum_output_amount) => {
             coin(minimum_output_amount.u128(), output_denom)
         }
