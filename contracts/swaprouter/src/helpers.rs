@@ -2,10 +2,10 @@ use std::ops::Mul;
 
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, Timestamp, Uint128};
 use osmosis_std::shim::Timestamp as OsmosisTimestamp;
-use osmosis_std::types::osmosis::gamm::twap::v1beta1::TwapQuerier;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, SwapAmountInRoute,
 };
+use osmosis_std::types::osmosis::twap::v1beta1::TwapQuerier;
 
 use crate::{
     state::{ROUTING_TABLE, STATE},
@@ -114,12 +114,11 @@ pub fn calculate_min_output_from_twap(
 
     for route_part in route {
         let twap = TwapQuerier::new(&deps.querier)
-            .get_arithmetic_twap(
+            .arithmetic_twap_to_now(
                 route_part.pool_id,
                 quote_denom.clone(),
                 route_part.token_out_denom,
                 Some(start_time.clone()),
-                None,
             )?
             .arithmetic_twap;
 
