@@ -51,8 +51,6 @@ pub fn trade_with_slippage_limit(
         return Err(ContractError::InsufficientFunds {});
     }
 
-    println!("HERE!");
-
     let min_output_token = match slipage {
         Slipage::MaxPriceImpactPercentage(percentage) => calculate_min_output_from_twap(
             deps.as_ref(),

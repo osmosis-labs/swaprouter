@@ -34,6 +34,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetOwner {},
+    TestTwap {},
     GetRoute {
         input_denom: String,
         output_denom: String,
@@ -50,4 +51,10 @@ pub struct GetOwnerResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct GetRouteResponse {
     pub pool_route: Vec<SwapAmountInRoute>,
+}
+
+// Response for GetRoute query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TestTwapResponse {
+    pub price: String,
 }

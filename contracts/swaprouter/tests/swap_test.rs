@@ -1,7 +1,7 @@
 mod test_env;
 use std::str::FromStr;
 
-use cosmwasm_std::{Coin, Decimal};
+use cosmwasm_std::{to_vec, Coin, Decimal};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
 use osmosis_testing::{
@@ -117,6 +117,13 @@ const INITIAL_AMOUNT: u128 = 1_000_000_000_000;
 fn test_swap_success_case(msg: ExecuteMsg, funds: &[Coin]) {
     let (app, sender, res) = setup_route_and_execute_swap(&msg, &funds);
     dbg!(res);
+    let msg = ExecuteMsg::Swap {
+        input_coin: Coin::new(1000, "uosmo"),
+        output_denom: "uion".to_string(),
+        slipage: Slipage::MaxPriceImpactPercentage(Decimal::from_str("100").unwrap()),
+    };
+    println!("{:?}", String::from_utf8(to_vec(&msg).unwrap()).unwrap());
+
     assert_input_decreased_and_output_increased(&app, &sender.address(), &msg);
 }
 

@@ -8,7 +8,7 @@ use cw2::set_contract_version;
 use crate::error::ContractError;
 use crate::execute::{handle_swap_reply, set_route, trade_with_slippage_limit};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::query::{query_owner, query_route};
+use crate::query::{query_owner, query_route, test_twap};
 use crate::state::{State, STATE, SWAP_REPLY_STATES};
 
 // version info for migration info
@@ -60,13 +60,14 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetOwner {} => to_binary(&query_owner(deps)?),
         QueryMsg::GetRoute {
             input_denom,
             output_denom,
         } => to_binary(&query_route(deps, &input_denom, &output_denom)?),
+        QueryMsg::TestTwap {} => to_binary(&test_twap(deps, env)?),
     }
 }
 
