@@ -1,4 +1,4 @@
-use std::ops::Mul;
+use std::ops::{Div, Mul};
 
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, Timestamp, Uint128};
 use osmosis_std::shim::Timestamp as OsmosisTimestamp;
@@ -103,13 +103,15 @@ pub fn calculate_min_output_from_twap(
         });
     }
 
+    let percentage = percentage_impact.div(Uint128::new(100));
+
     let mut twap_price: Decimal = Decimal::one();
     let quote_denom = input_token.denom;
 
     let start_time = now.minus_seconds(300);
     let start_time = OsmosisTimestamp {
         seconds: start_time.seconds() as i64,
-        nanos: start_time.nanos() as i32,
+        nanos: 0_i32,
     };
 
     for route_part in route {
@@ -133,8 +135,8 @@ pub fn calculate_min_output_from_twap(
                 })?;
     }
 
-    let twap_price = twap_price + twap_price.mul(percentage_impact);
-    let twap_price: Uint128 = twap_price.atomics();
+    twap_price = twap_price - twap_price.mul(percentage);
+    let min_out: Uint128 = input_token.amount.mul(twap_price);
 
-    Ok(Coin::new(twap_price.into(), output_denom))
+    Ok(Coin::new(min_out.into(), output_denom))
 }

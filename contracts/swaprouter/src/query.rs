@@ -29,7 +29,7 @@ pub fn test_twap(deps: Deps, env: Env) -> StdResult<TestTwapResponse> {
     let start_time = env.block.time.minus_seconds(300);
     let start_time = OsmosisTimestamp {
         seconds: start_time.seconds() as i64,
-        nanos: start_time.nanos() as i32,
+        nanos: 0_i32,
     };
 
     let twap = TwapQuerier::new(&deps.querier)
