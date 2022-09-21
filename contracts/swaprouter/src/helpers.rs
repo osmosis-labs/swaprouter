@@ -5,7 +5,7 @@ use osmosis_std::shim::Timestamp as OsmosisTimestamp;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, SwapAmountInRoute,
 };
-use osmosis_std::types::osmosis::twap::v1beta1::TwapQuerier;
+use osmosis_std::types::osmosis::twap::v1beta1::{ArithmeticTwapToNowRequest, TwapQuerier};
 
 use crate::{
     state::{ROUTING_TABLE, STATE},
@@ -106,23 +106,40 @@ pub fn calculate_min_output_from_twap(
     let percentage = percentage_impact.div(Uint128::new(100));
 
     let mut twap_price: Decimal = Decimal::one();
-    let quote_denom = input_token.denom;
+    let mut quote_denom = input_token.denom;
 
-    let start_time = now.minus_seconds(300);
+    let start_time = now.minus_seconds(1);
     let start_time = OsmosisTimestamp {
         seconds: start_time.seconds() as i64,
         nanos: 0_i32,
     };
 
+    deps.api.debug("Before!");
+
     for route_part in route {
-        let twap = TwapQuerier::new(&deps.querier)
-            .arithmetic_twap_to_now(
-                route_part.pool_id,
-                quote_denom.clone(),
-                route_part.token_out_denom,
-                Some(start_time.clone()),
-            )?
-            .arithmetic_twap;
+        deps.api.debug(&format!("route part: {route_part:?}"));
+
+        let myquery = ArithmeticTwapToNowRequest {
+            pool_id: route_part.pool_id,
+            base_asset: quote_denom.clone(),
+            quote_asset: route_part.token_out_denom.clone(),
+            start_time: Some(start_time.clone()),
+        };
+        deps.api.debug(&format!("{myquery:?}"));
+
+        let result = myquery.query(&deps.querier);
+
+        deps.api.debug(&format!("RESULT: {result:?}"));
+
+        // let result = TwapQuerier::new(&deps.querier).arithmetic_twap_to_now(
+        //     route_part.pool_id,
+        //     route_part.token_out_denom, // base_asset
+        //     quote_denom.clone(),        // quote_asset
+        //     Some(start_time.clone()),
+        // );
+        let twap = result?.arithmetic_twap;
+
+        deps.api.debug(&format!("failed?"));
 
         let twap: Decimal = twap.parse().map_err(|_e| ContractError::CustomError {
             val: "Invalid twap value received from the chain".to_string(),
@@ -133,10 +150,15 @@ pub fn calculate_min_output_from_twap(
                 .map_err(|_e| ContractError::CustomError {
                     val: format!("Invalid value for twap price: {twap_price} * {twap}"),
                 })?;
+        quote_denom = route_part.token_out_denom;
+        deps.api.debug(&format!("twap: {twap_price}"));
     }
 
     twap_price = twap_price - twap_price.mul(percentage);
+    deps.api.debug(&format!("twap end: {twap_price}"));
+
     let min_out: Uint128 = input_token.amount.mul(twap_price);
+    deps.api.debug(&format!("min: {min_out}"));
 
     Ok(Coin::new(min_out.into(), output_denom))
 }

@@ -34,9 +34,9 @@ pub fn test_twap(deps: Deps, env: Env) -> StdResult<TestTwapResponse> {
 
     let twap = TwapQuerier::new(&deps.querier)
         .arithmetic_twap_to_now(
-            1,
+            2,
             "uosmo".to_string(),
-            "uion".to_string(),
+            "uatom".to_string(),
             Some(start_time.clone()),
         )?
         .arithmetic_twap;

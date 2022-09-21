@@ -115,10 +115,9 @@ macro_rules! test_swap {
 const INITIAL_AMOUNT: u128 = 1_000_000_000_000;
 
 fn test_swap_success_case(msg: ExecuteMsg, funds: &[Coin]) {
-    let (app, sender, res) = setup_route_and_execute_swap(&msg, &funds);
-    dbg!(res);
-    println!("{:?}", String::from_utf8(to_vec(&msg).unwrap()).unwrap());
-
+    let (app, sender, _res) = setup_route_and_execute_swap(&msg, &funds);
+    //dbg!(res);
+    //println!("{:?}", String::from_utf8(to_vec(&msg).unwrap()).unwrap());
     assert_input_decreased_and_output_increased(&app, &sender.address(), &msg);
 }
 
