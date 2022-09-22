@@ -64,8 +64,6 @@ pub fn trade_with_slippage_limit(
         }
     };
 
-    dbg!(&min_output_token);
-
     // generate the swap_msg
     let swap_msg = generate_swap_msg(
         deps.as_ref(),
@@ -75,7 +73,6 @@ pub fn trade_with_slippage_limit(
     )?;
 
     // save intermediate state for reply
-
     SWAP_REPLY_STATES.save(
         deps.storage,
         SWAP_REPLY_ID,
@@ -85,6 +82,7 @@ pub fn trade_with_slippage_limit(
         },
     )?;
 
+    // TODO: Should we handle the error here?
     Ok(Response::new()
         .add_attribute("action", "trade_with_slippage_limit")
         .add_submessage(SubMsg::reply_on_success(swap_msg, SWAP_REPLY_ID)))

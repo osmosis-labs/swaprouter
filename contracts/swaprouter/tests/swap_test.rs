@@ -1,7 +1,7 @@
 mod test_env;
 use std::str::FromStr;
 
-use cosmwasm_std::{to_vec, Coin, Decimal};
+use cosmwasm_std::{Coin, Decimal};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
 use osmosis_testing::{
@@ -85,12 +85,12 @@ test_swap!(
     should succeed,
 
     msg = ExecuteMsg::Swap {
-        input_coin: Coin::new(10, "uosmo"),
+        input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
-        slipage: Slipage::MaxPriceImpactPercentage(Decimal::from_str("2").unwrap()),
+        slipage: Slipage::MaxPriceImpactPercentage(Decimal::from_str("5").unwrap()),
     },
     funds: [
-        Coin::new(10, "uosmo")
+        Coin::new(10000, "uosmo")
     ]
 );
 
@@ -184,7 +184,9 @@ fn setup_route_and_execute_swap(
         matches!(msg, ExecuteMsg::Swap { .. }),
         "only allow `ExecuteMsg::Swap` msg for this test"
     );
+    dbg!("executing");
     let res = wasm.execute(&contract_address, &msg, funds, &sender);
+    dbg!("done");
     (app, sender, res)
 }
 
