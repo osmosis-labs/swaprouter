@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use cosmwasm_std::{Coin, Decimal};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
+use osmosis_testing::cosmrs::proto::cosmos::bank::v1beta1::QueryAllBalancesRequest;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
 use osmosis_testing::{
     Account, Bank, Module, OsmosisTestApp, RunnerError, RunnerExecuteResult, SigningAccount, Wasm,
@@ -196,7 +197,13 @@ fn assert_input_decreased_and_output_increased(
     msg: &ExecuteMsg,
 ) {
     let bank = Bank::new(app);
-    let balances = bank.query_all_balances(sender, None).unwrap().balances;
+    let balances = bank
+        .query_all_balances(&QueryAllBalancesRequest {
+            address: sender.to_string(),
+            pagination: None,
+        })
+        .unwrap()
+        .balances;
     match msg {
         ExecuteMsg::Swap {
             input_coin,
