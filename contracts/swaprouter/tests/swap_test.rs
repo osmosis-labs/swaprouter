@@ -88,7 +88,7 @@ test_swap!(
     msg = ExecuteMsg::Swap {
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
-        slipage: Slipage::MaxPriceImpactPercentage(Decimal::from_str("5").unwrap()),
+        slipage: Slipage::MaxSlipagePercentage(Decimal::from_str("5").unwrap()),
     },
     funds: [
         Coin::new(10000, "uosmo")
@@ -185,9 +185,7 @@ fn setup_route_and_execute_swap(
         matches!(msg, ExecuteMsg::Swap { .. }),
         "only allow `ExecuteMsg::Swap` msg for this test"
     );
-    dbg!("executing");
     let res = wasm.execute(&contract_address, &msg, funds, &sender);
-    dbg!("done");
     (app, sender, res)
 }
 

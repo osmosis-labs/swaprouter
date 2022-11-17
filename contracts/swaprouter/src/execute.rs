@@ -52,7 +52,7 @@ pub fn trade_with_slippage_limit(
     }
 
     let min_output_token = match slipage {
-        Slipage::MaxPriceImpactPercentage(percentage) => calculate_min_output_from_twap(
+        Slipage::MaxSlipagePercentage(percentage) => calculate_min_output_from_twap(
             deps.as_ref(),
             input_token.clone(),
             output_denom,
