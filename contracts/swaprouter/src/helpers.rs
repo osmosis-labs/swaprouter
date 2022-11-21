@@ -81,9 +81,7 @@ pub fn generate_swap_msg(
     min_output_token: Coin,
 ) -> Result<MsgSwapExactAmountIn, ContractError> {
     // get trade route
-    dbg!("generating");
     let route = ROUTING_TABLE.load(deps.storage, (&input_token.denom, &min_output_token.denom))?;
-    dbg!(route.clone());
     Ok(MsgSwapExactAmountIn {
         sender: sender.into_string(),
         routes: route,

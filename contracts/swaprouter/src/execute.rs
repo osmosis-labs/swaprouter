@@ -2,8 +2,8 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    coin, coins, has_coins, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128,
+    coin, coins, has_coins, to_binary, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response,
+    SubMsg, SubMsgResponse, SubMsgResult, Uint128,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
 
@@ -12,7 +12,7 @@ use crate::error::ContractError;
 use crate::helpers::{
     calculate_min_output_from_twap, check_is_contract_owner, generate_swap_msg, validate_pool_route,
 };
-use crate::msg::Slipage;
+use crate::msg::{Slipage, SwapResponse};
 use crate::state::{SwapMsgReplyState, ROUTING_TABLE, SWAP_REPLY_STATES};
 
 pub fn set_route(
@@ -47,6 +47,7 @@ pub fn trade_with_slippage_limit(
     output_denom: String,
     slipage: Slipage,
 ) -> Result<Response, ContractError> {
+    deps.api.debug("trade_with_slippage_limit");
     if !has_coins(&info.funds, &input_token) {
         return Err(ContractError::InsufficientFunds {});
     }
@@ -82,12 +83,9 @@ pub fn trade_with_slippage_limit(
         },
     )?;
 
-    // TODO: Should we handle the error here?
     Ok(Response::new()
         .add_attribute("action", "trade_with_slippage_limit")
         .add_submessage(SubMsg::reply_on_success(swap_msg, SWAP_REPLY_ID)))
-
-    // TODO: add more attributes
 }
 
 pub fn handle_swap_reply(
@@ -108,12 +106,19 @@ pub fn handle_swap_reply(
             .token_out_denom;
 
         let bank_msg = BankMsg::Send {
-            to_address: swap_msg_reply_state.original_sender.into_string(),
+            to_address: swap_msg_reply_state.original_sender.clone().into_string(),
             amount: coins(amount.u128(), send_denom),
+        };
+
+        let response = SwapResponse {
+            original_sender: swap_msg_reply_state.original_sender.into_string(),
+            send_denom: send_denom.to_string(),
+            amount: amount.u128().into(),
         };
 
         return Ok(Response::new()
             .add_message(bank_msg)
+            .set_data(to_binary(&response)?)
             .add_attribute("token_out_amount", amount));
     }
 

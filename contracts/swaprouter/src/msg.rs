@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, Uint128};
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 use schemars::JsonSchema;
@@ -34,7 +35,6 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetOwner {},
-    TestTwap {},
     GetRoute {
         input_denom: String,
         output_denom: String,
@@ -43,18 +43,22 @@ pub enum QueryMsg {
 
 // Response for GetOwner query
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct GetOwnerResponse {
     pub owner: String,
 }
 
 // Response for GetRoute query
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct GetRouteResponse {
     pub pool_route: Vec<SwapAmountInRoute>,
 }
 
-// Response for GetRoute query
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct TestTwapResponse {
-    pub price: String,
+// Response for Swap
+#[cw_serde]
+pub struct SwapResponse {
+    pub original_sender: String,
+    pub send_denom: String,
+    pub amount: Uint128,
 }
