@@ -58,8 +58,8 @@ fn crosschain_swap() {
         input_coin: input_coin.clone(),
         output_denom: output_denom.clone(),
         slipage: Slipage::MaxSlipagePercentage(Decimal::from_str("5").unwrap()),
-        receiver: Addr::unchecked(""),
-        channel: format!(""),
+        receiver: Addr::unchecked("osmo1l4u56l7cvx8n0n6c7w650k02vz67qudjlcut89"),
+        channel: format!("some_channel"),
         failed_delivery: None,
     };
     let funds: &[Coin] = &[Coin::new(10000, "uosmo")];

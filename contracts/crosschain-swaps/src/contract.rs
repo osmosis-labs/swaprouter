@@ -42,7 +42,7 @@ pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, C
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -56,6 +56,7 @@ pub fn execute(
             failed_delivery,
         } => execute::swap_and_forward(
             deps,
+            env.block.time,
             input_coin,
             output_denom,
             slipage,
