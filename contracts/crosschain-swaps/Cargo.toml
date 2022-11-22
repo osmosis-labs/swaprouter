@@ -39,6 +39,7 @@ serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 swaprouter = { path = "../swaprouter", features = ["library"]}
 cw-utils = "0.16.0"
+serde-json-wasm = "0.4.1"
 
 [dev-dependencies]
 cw-multi-test = "0.13.2"

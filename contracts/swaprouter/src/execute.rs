@@ -47,7 +47,6 @@ pub fn trade_with_slippage_limit(
     output_denom: String,
     slipage: Slipage,
 ) -> Result<Response, ContractError> {
-    deps.api.debug("trade_with_slippage_limit");
     if !has_coins(&info.funds, &input_token) {
         return Err(ContractError::InsufficientFunds {});
     }

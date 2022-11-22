@@ -47,6 +47,8 @@ fn crosschain_swap() {
         ],
     };
 
+    println!("{:?}", serde_json_wasm::to_string(&set_route_msg).unwrap());
+
     // setup route by swaprouter's owner
     wasm.execute(&swaprouter_address, &set_route_msg, &[], &owner)
         .expect("Setup route fixture must always succeed");
@@ -63,6 +65,7 @@ fn crosschain_swap() {
         failed_delivery: None,
     };
     let funds: &[Coin] = &[Coin::new(10000, "uosmo")];
+    println!("{}", serde_json_wasm::to_string(&msg).unwrap());
     let res = wasm.execute(&crosschain_address, &msg, funds, &sender);
     dbg!(&res);
 

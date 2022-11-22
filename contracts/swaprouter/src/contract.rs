@@ -72,6 +72,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    deps.api
+        .debug(&format!("executing swaprouter reply: {msg:?}"));
     if msg.id == SWAP_REPLY_ID {
         // get intermediate swap reply state. Error if not found.
         let swap_msg_state = SWAP_REPLY_STATES.load(deps.storage, msg.id)?;

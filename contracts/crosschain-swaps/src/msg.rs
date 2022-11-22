@@ -27,6 +27,12 @@ pub enum ExecuteMsg {
     },
 }
 
+// tmp structure for crosschain response
+#[cw_serde]
+pub struct CrosschainSwapResponse {
+    pub msg: String,
+}
+
 /// Message type for `migrate` entry_point
 #[cw_serde]
 pub enum MigrateMsg {}

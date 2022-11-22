@@ -120,10 +120,10 @@ pub fn calculate_min_output_from_twap(
         nanos: 0_i32,
     };
 
-    //deps.api.debug(&format!("twap_price: {twap_price}"));
+    // deps.api.debug(&format!("twap_price: {twap_price}"));
 
     for route_part in route {
-        //deps.api.debug(&format!("route part: {route_part:?}"));
+        // deps.api.debug(&format!("route part: {route_part:?}"));
 
         let twap = TwapQuerier::new(&deps.querier)
             .arithmetic_twap_to_now(
@@ -131,10 +131,13 @@ pub fn calculate_min_output_from_twap(
                 route_part.token_out_denom.clone(), // base_asset
                 quote_denom.clone(),                // quote_asset
                 Some(start_time.clone()),
-            )?
+            )
+            .map_err(|_e| ContractError::CustomError {
+                val: format!("failed to fetch twap price for {route_part:?} in {quote_denom}"),
+            })?
             .arithmetic_twap;
 
-        //deps.api.debug(&format!("twap = {twap}"));
+        // deps.api.debug(&format!("twap = {twap}"));
 
         let twap: Decimal = twap.parse().map_err(|_e| ContractError::CustomError {
             val: "Invalid twap value received from the chain".to_string(),
@@ -149,16 +152,16 @@ pub fn calculate_min_output_from_twap(
 
         // the current output is the input for the next route_part
         quote_denom = route_part.token_out_denom;
-        //deps.api.debug(&format!("twap_price: {twap_price}"));
+        // deps.api.debug(&format!("twap_price: {twap_price}"));
     }
 
     twap_price = twap_price - twap_price.mul(percentage);
-    deps.api.debug(&format!(
-        "twap_price minus {percentage_impact}%: {twap_price}"
-    ));
+    // deps.api.debug(&format!(
+    //     "twap_price minus {percentage_impact}%: {twap_price}"
+    // ));
 
     let min_out: Uint128 = input_token.amount.mul(twap_price);
-    deps.api.debug(&format!("min: {min_out}"));
+    // deps.api.debug(&format!("min: {min_out}"));
 
     Ok(Coin::new(min_out.into(), output_denom))
 }
