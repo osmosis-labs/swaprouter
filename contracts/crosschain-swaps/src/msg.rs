@@ -9,9 +9,9 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-//#[serde(untagged)]
-pub struct ReturnTo {
-    return_addr: Addr,
+#[serde(untagged)]
+pub enum FailedDelivery {
+    ReturnTo { return_addr: Addr },
 }
 
 /// Message type for `execute` entry_point
@@ -23,7 +23,7 @@ pub enum ExecuteMsg {
         slipage: Slipage,
         receiver: Addr,
         channel: String,
-        failed_delivery: Option<ReturnTo>,
+        failed_delivery: Option<FailedDelivery>,
     },
 }
 

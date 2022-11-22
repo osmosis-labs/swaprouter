@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, Coin, DepsMut, Response, SubMsg, SubMsgResponse, SubMsg
 use swaprouter::msg::{ExecuteMsg as SwapRouterExecute, Slipage, SwapResponse};
 
 use crate::consts::SWAP_REPLY_ID;
-use crate::msg::ReturnTo;
+use crate::msg::FailedDelivery;
 use crate::state::CONFIG;
 use crate::ContractError;
 
@@ -16,7 +16,7 @@ pub fn swap_and_forward(
     slipage: Slipage,
     _receiver: Addr,
     _channel: String,
-    _failed_delivery: Option<ReturnTo>,
+    _failed_delivery: Option<FailedDelivery>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let swap_msg = SwapRouterExecute::Swap {
