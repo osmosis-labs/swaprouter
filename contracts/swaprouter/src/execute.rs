@@ -97,7 +97,7 @@ pub fn handle_swap_reply(
 
         let amount = Uint128::from_str(&res.token_out_amount)?;
 
-        let send_denom = &swap_msg_reply_state
+        let token_out_denom = &swap_msg_reply_state
             .swap_msg
             .routes
             .last()
@@ -106,12 +106,12 @@ pub fn handle_swap_reply(
 
         let bank_msg = BankMsg::Send {
             to_address: swap_msg_reply_state.original_sender.clone().into_string(),
-            amount: coins(amount.u128(), send_denom),
+            amount: coins(amount.u128(), token_out_denom),
         };
 
         let response = SwapResponse {
             original_sender: swap_msg_reply_state.original_sender.into_string(),
-            send_denom: send_denom.to_string(),
+            token_out_denom: token_out_denom.to_string(),
             amount: amount.u128().into(),
         };
 

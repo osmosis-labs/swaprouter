@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Timestamp};
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::Item;
 use swaprouter::msg::ExecuteMsg as SwapRouterExecute;
 
 #[cw_serde]
@@ -21,5 +21,14 @@ pub struct SwapMsgReplyState {
     pub forward_to: ForwardTo,
 }
 
+#[cw_serde]
+pub struct ForwardMsgReplyState {
+    pub channel_id: String,
+    pub to_address: String,
+    pub amount: u128,
+    pub denom: String,
+}
+
 pub const CONFIG: Item<Config> = Item::new("config");
-pub const SWAP_REPLY_STATES: Map<u64, SwapMsgReplyState> = Map::new("swap_reply_states");
+pub const SWAP_REPLY_STATES: Item<SwapMsgReplyState> = Item::new("swap_reply_states");
+pub const FORWARD_REPLY_STATES: Item<ForwardMsgReplyState> = Item::new("forward_reply_states");

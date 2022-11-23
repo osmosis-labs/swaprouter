@@ -59,6 +59,6 @@ pub struct GetRouteResponse {
 #[cw_serde]
 pub struct SwapResponse {
     pub original_sender: String,
-    pub send_denom: String,
+    pub token_out_denom: String,
     pub amount: Uint128,
 }
