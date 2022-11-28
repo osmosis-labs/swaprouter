@@ -3,10 +3,10 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
 use cw2::set_contract_version;
 
-use crate::consts::SWAP_REPLY_ID;
+use crate::consts::{FORWARD_REPLY_ID, SWAP_REPLY_ID};
 use crate::error::ContractError;
 use crate::execute;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg};
 use crate::state::{Config, CONFIG};
 
 // version info for migration info
@@ -23,9 +23,13 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    // validate swap contract address and save to config
+    // validate contract addresses and save to config
     let swap_contract = deps.api.addr_validate(&msg.swap_contract)?;
-    let state = Config { swap_contract };
+    let ibc_listeners_contract = deps.api.addr_validate(&msg.ibc_listeners_contract)?;
+    let state = Config {
+        swap_contract,
+        ibc_listeners_contract,
+    };
     CONFIG.save(deps.storage, &state)?;
 
     Ok(Response::new()
@@ -67,16 +71,30 @@ pub fn execute(
     }
 }
 
-/// Handling contract query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
     match msg {
-        // Find matched incoming message variant and query them your custom logic
-        // and then construct your query response with the type usually defined
-        // `msg.rs` alongside with the query message itself.
-        //
-        // use `cosmwasm_std::to_binary` to serialize query response to json binary.
+        SudoMsg::ReceivePacket {} => unimplemented!(),
+        SudoMsg::ReceiveAck {
+            sequence,
+            ack,
+            success,
+        } => receive_ack(deps, sequence, ack, success),
+        SudoMsg::ReceiveTimeout {} => unimplemented!(),
     }
+}
+
+fn receive_ack(
+    deps: DepsMut,
+    sequence: u64,
+    ack: String,
+    success: bool,
+) -> Result<Response, ContractError> {
+    deps.api.debug(&format!(
+        "received ack for packet {sequence:?}: {ack:?}, {success:?}"
+    ));
+
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -1,4 +1,4 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin};
 use swaprouter::msg::Slipage;
 
@@ -6,6 +6,7 @@ use swaprouter::msg::Slipage;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub swap_contract: String,
+    pub ibc_listeners_contract: String,
 }
 
 #[cw_serde]
@@ -37,19 +38,26 @@ pub struct CrosschainSwapResponse {
 #[cw_serde]
 pub enum MigrateMsg {}
 
-/// Message type for `query` entry_point
 #[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsg {
-    // This example query variant indicates that any client can query the contract
-    // using `YourQuery` and it will return `YourQueryResponse`
-    // This `returns` information will be included in contract's schema
-    // which is used for client code generation.
-    //
-    // #[returns(YourQueryResponse)]
-    // YourQuery {},
+pub enum SudoMsg {
+    ReceivePacket {},
+    ReceiveAck {
+        sequence: u64,
+        ack: String,
+        success: bool,
+    },
+    ReceiveTimeout {},
 }
 
-// We define a custom struct for each query response
-// #[cw_serde]
-// pub struct YourQueryResponse {}
+// Copying this temporarily
+#[cw_serde]
+pub enum ListenersMsg {
+    Subscribe { sequence: u64, event: EventType },
+}
+
+// Copying this while the contract is not importable
+#[cw_serde]
+pub enum EventType {
+    Acknowledgement,
+    Timeout,
+}
