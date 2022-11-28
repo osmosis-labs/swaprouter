@@ -1,4 +1,4 @@
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin};
 use swaprouter::msg::Slipage;
 
@@ -26,6 +26,13 @@ pub enum ExecuteMsg {
         failed_delivery: Option<Recovery>,
     },
     Recover {},
+}
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum QueryMsg {
+    #[returns(Vec<crate::state::RecoveryState>)]
+    Recoverable { addr: Addr },
 }
 
 // tmp structure for crosschain response

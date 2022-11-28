@@ -1,4 +1,6 @@
-use cosmwasm_std::{from_binary, to_binary, wasm_execute, IbcMsg, IbcTimeout, Reply, Timestamp};
+use cosmwasm_std::{
+    coins, from_binary, to_binary, wasm_execute, BankMsg, IbcMsg, IbcTimeout, Reply, Timestamp,
+};
 use cosmwasm_std::{Addr, Coin, DepsMut, Response, SubMsg, SubMsgResponse, SubMsgResult};
 use swaprouter::msg::{ExecuteMsg as SwapRouterExecute, Slipage, SwapResponse};
 
@@ -173,13 +175,11 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
         .add_attribute("receiver", to_address))
 }
 
-pub fn recover(deps: DepsMut, sender: Addr, now: Timestamp) -> Result<Response, ContractError> {
+pub fn recover(deps: DepsMut, sender: Addr) -> Result<Response, ContractError> {
     let recoveries = RECOVERY_STATES.load(deps.storage, &sender)?;
-    let msgs = recoveries.into_iter().map(|r| IbcMsg::Transfer {
-        channel_id: r.channel_id,
+    let msgs = recoveries.into_iter().map(|r| BankMsg::Send {
         to_address: r.recovery_addr.into(),
-        amount: Coin::new(r.amount, r.denom),
-        timeout: IbcTimeout::with_timestamp(now.plus_seconds(PACKET_LIFETIME)),
+        amount: coins(r.amount, r.denom),
     });
     Ok(Response::new().add_messages(msgs))
 }

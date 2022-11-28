@@ -1,12 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Reply, Response};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::consts::{FORWARD_REPLY_ID, SWAP_REPLY_ID};
 use crate::error::ContractError;
 use crate::execute;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg};
 use crate::state::{Config, Status, CONFIG, INFLIGHT_PACKETS, RECOVERY_STATES};
 
 // version info for migration info
@@ -68,7 +70,16 @@ pub fn execute(
             channel,
             failed_delivery,
         ),
-        ExecuteMsg::Recover {} => execute::recover(deps, info.sender, env.block.time),
+        ExecuteMsg::Recover {} => execute::recover(deps, info.sender),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Recoverable { addr } => {
+            to_binary(&RECOVERY_STATES.may_load(deps.storage, &addr)?)
+        }
     }
 }
 
