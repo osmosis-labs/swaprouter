@@ -3,7 +3,8 @@ use cosmwasm_std::{Addr, Coin, DepsMut, Response, SubMsg, SubMsgResponse, SubMsg
 use swaprouter::msg::{ExecuteMsg as SwapRouterExecute, Slipage, SwapResponse};
 
 use crate::consts::{FORWARD_REPLY_ID, PACKET_LIFETIME, SWAP_REPLY_ID};
-use crate::msg::{CrosschainSwapResponse, EventType, ListenersMsg, ReturnTo};
+use crate::msg::{CrosschainSwapResponse, EventType, ListenersMsg, Recovery};
+
 use crate::state::{
     ForwardMsgReplyState, ForwardTo, SwapMsgReplyState, CONFIG, FORWARD_REPLY_STATES,
     SWAP_REPLY_STATES,
@@ -18,7 +19,7 @@ pub fn swap_and_forward(
     slipage: Slipage,
     receiver: Addr,
     channel: String,
-    _failed_delivery: Option<ReturnTo>,
+    _failed_delivery: Option<Recovery>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let swap_msg = SwapRouterExecute::Swap {
@@ -118,6 +119,7 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
     let ack_msg = wasm_execute(
         config.ibc_listeners_contract.clone(),
         &ListenersMsg::Subscribe {
+            channel: channel_id.clone(),
             sequence: response.sequence,
             event: EventType::Acknowledgement,
         },
@@ -126,6 +128,7 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
     let timeout_msg = wasm_execute(
         config.ibc_listeners_contract,
         &ListenersMsg::Subscribe {
+            channel: channel_id.clone(),
             sequence: response.sequence,
             event: EventType::Timeout,
         },

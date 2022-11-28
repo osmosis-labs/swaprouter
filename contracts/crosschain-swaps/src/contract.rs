@@ -68,6 +68,7 @@ pub fn execute(
             channel,
             failed_delivery,
         ),
+        ExecuteMsg::Recover {} => todo!(),
     }
 }
 
@@ -76,22 +77,24 @@ pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, Contract
     match msg {
         SudoMsg::ReceivePacket {} => unimplemented!(),
         SudoMsg::ReceiveAck {
+            channel,
             sequence,
             ack,
             success,
-        } => receive_ack(deps, sequence, ack, success),
+        } => receive_ack(deps, channel, sequence, ack, success),
         SudoMsg::ReceiveTimeout {} => unimplemented!(),
     }
 }
 
 fn receive_ack(
     deps: DepsMut,
+    channel: String,
     sequence: u64,
     ack: String,
     success: bool,
 ) -> Result<Response, ContractError> {
     deps.api.debug(&format!(
-        "received ack for packet {sequence:?}: {ack:?}, {success:?}"
+        "received ack for packet {channel:?} {sequence:?}: {ack:?}, {success:?}"
     ));
 
     Ok(Response::default())

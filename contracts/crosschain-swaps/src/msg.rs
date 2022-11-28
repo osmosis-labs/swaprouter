@@ -10,9 +10,8 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-//#[serde(untagged)]
-pub struct ReturnTo {
-    return_addr: Addr,
+pub struct Recovery {
+    recovery_addr: Addr,
 }
 
 /// Message type for `execute` entry_point
@@ -24,8 +23,9 @@ pub enum ExecuteMsg {
         slipage: Slipage,
         receiver: Addr,
         channel: String,
-        failed_delivery: Option<ReturnTo>,
+        failed_delivery: Option<Recovery>,
     },
+    Recover {},
 }
 
 // tmp structure for crosschain response
@@ -42,6 +42,7 @@ pub enum MigrateMsg {}
 pub enum SudoMsg {
     ReceivePacket {},
     ReceiveAck {
+        channel: String,
         sequence: u64,
         ack: String,
         success: bool,
@@ -52,7 +53,11 @@ pub enum SudoMsg {
 // Copying this temporarily
 #[cw_serde]
 pub enum ListenersMsg {
-    Subscribe { sequence: u64, event: EventType },
+    Subscribe {
+        channel: String,
+        sequence: u64,
+        event: EventType,
+    },
 }
 
 // Copying this while the contract is not importable
