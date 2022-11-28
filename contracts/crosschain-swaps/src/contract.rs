@@ -1,13 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 
 use crate::consts::{FORWARD_REPLY_ID, SWAP_REPLY_ID};
 use crate::error::ContractError;
 use crate::execute;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg};
-use crate::state::{Config, CONFIG};
+use crate::state::{Config, Status, CONFIG, INFLIGHT_PACKETS, RECOVERY_STATES};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:crosschain-swaps";
@@ -47,7 +47,7 @@ pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, C
 pub fn execute(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
@@ -68,7 +68,7 @@ pub fn execute(
             channel,
             failed_delivery,
         ),
-        ExecuteMsg::Recover {} => todo!(),
+        ExecuteMsg::Recover {} => execute::recover(deps, info.sender, env.block.time),
     }
 }
 
@@ -96,8 +96,30 @@ fn receive_ack(
     deps.api.debug(&format!(
         "received ack for packet {channel:?} {sequence:?}: {ack:?}, {success:?}"
     ));
+    let response = Response::new().add_attribute("contract", "crosschain_swaps");
+    let recovery = INFLIGHT_PACKETS.may_load(deps.storage, (&channel, sequence))?;
+    INFLIGHT_PACKETS.remove(deps.storage, (&channel, sequence));
+    let Some(mut recovery) = recovery else {
+      return Ok(response.add_attribute("msg", "received unexpected ack"))
+    };
 
-    Ok(Response::default())
+    if success {
+        return Ok(response.add_attribute("msg", "packet successfully delviered"));
+    }
+
+    let recovery_addr = recovery.recovery_addr.clone();
+    RECOVERY_STATES.update(deps.storage, &recovery_addr, |recoveries| {
+        recovery.status = Status::AckFailure;
+        let Some(mut recoveries) = recoveries else {
+            return Ok::<_, ContractError>(vec![recovery])
+        };
+        recoveries.push(recovery);
+        Ok(recoveries)
+    })?;
+
+    Ok(response
+        .add_attribute("msg", "Recovery Stored")
+        .add_attribute("reecovery_addr", recovery_addr))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

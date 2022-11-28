@@ -11,7 +11,7 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct Recovery {
-    recovery_addr: Addr,
+    pub recovery_addr: Addr,
 }
 
 /// Message type for `execute` entry_point

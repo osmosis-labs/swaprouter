@@ -6,8 +6,8 @@ use crate::consts::{FORWARD_REPLY_ID, PACKET_LIFETIME, SWAP_REPLY_ID};
 use crate::msg::{CrosschainSwapResponse, EventType, ListenersMsg, Recovery};
 
 use crate::state::{
-    ForwardMsgReplyState, ForwardTo, SwapMsgReplyState, CONFIG, FORWARD_REPLY_STATES,
-    SWAP_REPLY_STATES,
+    ForwardMsgReplyState, ForwardTo, RecoveryState, Status, SwapMsgReplyState, CONFIG,
+    FORWARD_REPLY_STATES, INFLIGHT_PACKETS, RECOVERY_STATES, SWAP_REPLY_STATES,
 };
 use crate::ContractError;
 
@@ -19,7 +19,7 @@ pub fn swap_and_forward(
     slipage: Slipage,
     receiver: Addr,
     channel: String,
-    _failed_delivery: Option<Recovery>,
+    failed_delivery: Option<Recovery>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let swap_msg = SwapRouterExecute::Swap {
@@ -34,7 +34,11 @@ pub fn swap_and_forward(
         &SwapMsgReplyState {
             swap_msg,
             block_time,
-            forward_to: ForwardTo { channel, receiver },
+            forward_to: ForwardTo {
+                channel,
+                receiver,
+                failed_delivery,
+            },
         },
     )?;
 
@@ -75,6 +79,7 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
             to_address: swap_msg_state.forward_to.receiver.into(),
             amount: response.amount.into(),
             denom: response.token_out_denom,
+            failed_delivery: swap_msg_state.forward_to.failed_delivery,
         },
     )?;
 
@@ -112,6 +117,7 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
         to_address,
         amount,
         denom,
+        failed_delivery,
     } = FORWARD_REPLY_STATES.load(deps.storage)?;
     FORWARD_REPLY_STATES.remove(deps.storage);
 
@@ -135,6 +141,24 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
         vec![],
     )?;
 
+    if let Some(Recovery { recovery_addr }) = failed_delivery {
+        let recovery = RecoveryState {
+            recovery_addr: recovery_addr.clone(),
+            channel_id: channel_id.clone(),
+            sequence: response.sequence,
+            amount,
+            denom: denom.clone(),
+            status: Status::Sent,
+        };
+
+        // Save as in-flight to be able to manipulate when the ack/timeout is received
+        INFLIGHT_PACKETS.save(
+            deps.storage,
+            (&channel_id.clone(), response.sequence),
+            &recovery,
+        )?;
+    };
+
     let response = CrosschainSwapResponse {
         msg: format!("Sent {amount}{denom} to {channel_id}/{to_address}"),
     };
@@ -147,4 +171,15 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
         .add_attribute("denom", denom)
         .add_attribute("channel", channel_id)
         .add_attribute("receiver", to_address))
+}
+
+pub fn recover(deps: DepsMut, sender: Addr, now: Timestamp) -> Result<Response, ContractError> {
+    let recoveries = RECOVERY_STATES.load(deps.storage, &sender)?;
+    let msgs = recoveries.into_iter().map(|r| IbcMsg::Transfer {
+        channel_id: r.channel_id,
+        to_address: r.recovery_addr.into(),
+        amount: Coin::new(r.amount, r.denom),
+        timeout: IbcTimeout::with_timestamp(now.plus_seconds(PACKET_LIFETIME)),
+    });
+    Ok(Response::new().add_messages(msgs))
 }
