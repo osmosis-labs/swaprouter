@@ -8,7 +8,6 @@ use crate::msg::Recovery;
 #[cw_serde]
 pub struct Config {
     pub swap_contract: Addr,
-    pub ibc_listeners_contract: Addr,
 }
 
 #[cw_serde]
@@ -21,6 +20,7 @@ pub struct ForwardTo {
 #[cw_serde]
 pub struct SwapMsgReplyState {
     pub swap_msg: SwapRouterExecute,
+    pub contract_addr: Addr,
     pub block_time: Timestamp,
     pub forward_to: ForwardTo,
 }
@@ -60,4 +60,4 @@ pub const FORWARD_REPLY_STATES: Item<ForwardMsgReplyState> = Item::new("forward_
 pub const RECOVERY_STATES: Map<&Addr, Vec<RecoveryState>> = Map::new("recovery");
 
 // In-Flight packets by (channel_id, sequence)
-pub const INFLIGHT_PACKETS: Map<(&str, u64), RecoveryState> = Map::new("recovery");
+pub const INFLIGHT_PACKETS: Map<(&str, u64), RecoveryState> = Map::new("inflight");

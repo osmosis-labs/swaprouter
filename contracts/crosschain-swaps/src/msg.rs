@@ -6,7 +6,6 @@ use swaprouter::msg::Slipage;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub swap_contract: String,
-    pub ibc_listeners_contract: String,
 }
 
 #[cw_serde]

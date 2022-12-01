@@ -5,6 +5,7 @@ use cosmwasm_std::{Addr, Coin, DepsMut, Response, SubMsg, SubMsgResponse, SubMsg
 use swaprouter::msg::{ExecuteMsg as SwapRouterExecute, Slipage, SwapResponse};
 
 use crate::consts::{FORWARD_REPLY_ID, PACKET_LIFETIME, SWAP_REPLY_ID};
+use crate::ibc::{MsgTransfer, MsgTransferResponse};
 use crate::msg::{CrosschainSwapResponse, EventType, ListenersMsg, Recovery};
 
 use crate::state::{
@@ -16,6 +17,7 @@ use crate::ContractError;
 pub fn swap_and_forward(
     deps: DepsMut,
     block_time: Timestamp,
+    contract_addr: Addr,
     input_coin: Coin,
     output_denom: String,
     slipage: Slipage,
@@ -36,6 +38,7 @@ pub fn swap_and_forward(
         &SwapMsgReplyState {
             swap_msg,
             block_time,
+            contract_addr,
             forward_to: ForwardTo {
                 channel,
                 receiver,
@@ -62,16 +65,34 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
         .map_err(|e| ContractError::CustomError { val: e.to_string() })?;
     let response: SwapResponse = from_binary(&parsed.data.unwrap())?;
 
-    let ibc_transfer = IbcMsg::Transfer {
-        channel_id: swap_msg_state.forward_to.channel.clone(),
-        to_address: swap_msg_state.forward_to.receiver.clone().into(),
-        amount: Coin::new(
-            response.amount.clone().into(),
-            response.token_out_denom.clone(),
+    // let ibc_transfer = IbcMsg::Transfer {
+    //     channel_id: swap_msg_state.forward_to.channel.clone(),
+    //     to_address: swap_msg_state.forward_to.receiver.clone().into(),
+    //     amount: Coin::new(
+    //         response.amount.clone().into(),
+    //         response.token_out_denom.clone(),
+    //     ),
+    //     timeout: IbcTimeout::with_timestamp(
+    //         swap_msg_state.block_time.plus_seconds(PACKET_LIFETIME),
+    //     ),
+    // };
+    let contract_addr = &swap_msg_state.contract_addr;
+    let ts = swap_msg_state.block_time.plus_seconds(PACKET_LIFETIME);
+    let ibc_transfer = MsgTransfer {
+        source_port: "transfer".to_string(),
+        source_channel: swap_msg_state.forward_to.channel.clone(),
+        token: Some(
+            Coin::new(
+                response.amount.clone().into(),
+                response.token_out_denom.clone(),
+            )
+            .into(),
         ),
-        timeout: IbcTimeout::with_timestamp(
-            swap_msg_state.block_time.plus_seconds(PACKET_LIFETIME),
-        ),
+        sender: contract_addr.to_string(),
+        receiver: swap_msg_state.forward_to.receiver.clone().into(),
+        timeout_height: None,
+        timeout_timestamp: Some(ts.nanos()),
+        memo: format!(r#"{{"callback": "{contract_addr}"}}"#),
     };
 
     FORWARD_REPLY_STATES.save(
@@ -93,12 +114,6 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
         .add_submessage(SubMsg::reply_on_success(ibc_transfer, FORWARD_REPLY_ID)))
 }
 
-// We define the response as a prost message to be able to decode the protobuf data.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgTransferResponse {
-    #[prost(uint64, tag = "1")]
-    pub sequence: u64,
-}
 use ::prost::Message; // Proveides ::decode() for MsgTransferResponse
 
 pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractError> {
@@ -122,26 +137,6 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
         failed_delivery,
     } = FORWARD_REPLY_STATES.load(deps.storage)?;
     FORWARD_REPLY_STATES.remove(deps.storage);
-
-    let config = CONFIG.load(deps.storage)?;
-    let ack_msg = wasm_execute(
-        config.ibc_listeners_contract.clone(),
-        &ListenersMsg::Subscribe {
-            channel: channel_id.clone(),
-            sequence: response.sequence,
-            event: EventType::Acknowledgement,
-        },
-        vec![],
-    )?;
-    let timeout_msg = wasm_execute(
-        config.ibc_listeners_contract,
-        &ListenersMsg::Subscribe {
-            channel: channel_id.clone(),
-            sequence: response.sequence,
-            event: EventType::Timeout,
-        },
-        vec![],
-    )?;
 
     if let Some(Recovery { recovery_addr }) = failed_delivery {
         let recovery = RecoveryState {
@@ -167,7 +162,6 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
 
     Ok(Response::new()
         .set_data(to_binary(&response)?)
-        .add_messages(vec![ack_msg, timeout_msg])
         .add_attribute("status", "ibc_message_created")
         .add_attribute("amount", amount.to_string())
         .add_attribute("denom", denom)

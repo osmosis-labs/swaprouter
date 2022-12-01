@@ -27,11 +27,7 @@ pub fn instantiate(
 
     // validate contract addresses and save to config
     let swap_contract = deps.api.addr_validate(&msg.swap_contract)?;
-    let ibc_listeners_contract = deps.api.addr_validate(&msg.ibc_listeners_contract)?;
-    let state = Config {
-        swap_contract,
-        ibc_listeners_contract,
-    };
+    let state = Config { swap_contract };
     CONFIG.save(deps.storage, &state)?;
 
     Ok(Response::new()
@@ -63,6 +59,7 @@ pub fn execute(
         } => execute::swap_and_forward(
             deps,
             env.block.time,
+            env.contract.address,
             input_coin,
             output_denom,
             slipage,
@@ -77,9 +74,11 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Recoverable { addr } => {
-            to_binary(&RECOVERY_STATES.may_load(deps.storage, &addr)?)
-        }
+        QueryMsg::Recoverable { addr } => to_binary(
+            &RECOVERY_STATES
+                .may_load(deps.storage, &addr)?
+                .or(Some(vec![])),
+        ),
     }
 }
 
