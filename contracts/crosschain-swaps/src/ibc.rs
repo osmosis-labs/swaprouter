@@ -1,5 +1,21 @@
 use osmosis_std_derive::CosmwasmExt;
 
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    ::prost::Message,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
+)]
+pub struct Height {
+    #[prost(uint64, optional, tag = "1")]
+    revision_number: Option<u64>,
+    #[prost(uint64, optional, tag = "2")]
+    revision_height: Option<u64>,
+}
+
 // We need to define the transfer here as a stargate messages because this is
 // not yet supported by cosmwasm-std
 #[derive(
@@ -24,8 +40,8 @@ pub struct MsgTransfer {
     pub sender: String,
     #[prost(string, tag = "5")]
     pub receiver: String,
-    #[prost(string, optional, tag = "6")]
-    pub timeout_height: Option<String>,
+    #[prost(message, optional, tag = "6")]
+    pub timeout_height: Option<Height>,
     #[prost(uint64, optional, tag = "7")]
     pub timeout_timestamp: ::core::option::Option<u64>,
     #[prost(string, tag = "8")]
