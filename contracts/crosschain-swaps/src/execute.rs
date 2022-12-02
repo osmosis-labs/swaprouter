@@ -81,7 +81,7 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
     // Parse underlying response from the chain
     let parsed = cw_utils::parse_execute_response_data(&b)
         .map_err(|e| ContractError::CustomError { val: e.to_string() })?;
-    let response: SwapResponse = from_binary(&parsed.data.unwrap())?;
+    let swap_response: SwapResponse = from_binary(&parsed.data.unwrap())?;
 
     // Build an IBC packet to forward the swap.
     let contract_addr = &swap_msg_state.contract_addr;
@@ -100,8 +100,8 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
         source_channel: swap_msg_state.forward_to.channel.clone(),
         token: Some(
             Coin::new(
-                response.amount.clone().into(),
-                response.token_out_denom.clone(),
+                swap_response.amount.clone().into(),
+                swap_response.token_out_denom.clone(),
             )
             .into(),
         ),
@@ -112,6 +112,17 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
         memo,
     };
 
+    // Base response
+    let response = Response::new()
+        .add_attribute("status", "ibc_message_created")
+        .add_attribute("ibc_message", format!("{:?}", ibc_transfer));
+
+    if !config.track_ibc_callbacks || swap_msg_state.forward_to.failed_delivery.is_none() {
+        // If we're not tracking callbacks, or there isn't any recovery addres,
+        // then there's no need to listen to the response of the send.
+        return Ok(response.add_message(ibc_transfer));
+    }
+
     // Store the ibc send information and the user's failed delivery preference
     // so that it can be handled by the response
     FORWARD_REPLY_STATES.save(
@@ -119,16 +130,13 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
         &ForwardMsgReplyState {
             channel_id: swap_msg_state.forward_to.channel,
             to_address: swap_msg_state.forward_to.receiver.into(),
-            amount: response.amount.into(),
-            denom: response.token_out_denom,
+            amount: swap_response.amount.into(),
+            denom: swap_response.token_out_denom,
             failed_delivery: swap_msg_state.forward_to.failed_delivery,
         },
     )?;
 
-    Ok(Response::new()
-        .add_attribute("status", "ibc_message_created")
-        .add_attribute("ibc_message", format!("{:?}", ibc_transfer))
-        .add_submessage(SubMsg::reply_on_success(ibc_transfer, FORWARD_REPLY_ID)))
+    Ok(response.add_submessage(SubMsg::reply_on_success(ibc_transfer, FORWARD_REPLY_ID)))
 }
 
 use ::prost::Message; // Proveides ::decode() for MsgTransferResponse
@@ -160,7 +168,6 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
 
     // If a recovery address was provided, store sent IBC transfer so that it
     // can later be recovered by that addr.
-    // TODO: This whole reply function can be skipped if there is no recovery addr provided
     if let Some(Recovery { recovery_addr }) = failed_delivery {
         let recovery = IBCTransfer {
             recovery_addr: recovery_addr.clone(),
