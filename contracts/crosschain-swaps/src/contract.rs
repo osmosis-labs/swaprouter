@@ -7,9 +7,9 @@ use cw2::set_contract_version;
 
 use crate::consts::{FORWARD_REPLY_ID, SWAP_REPLY_ID};
 use crate::error::ContractError;
-use crate::execute;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg};
-use crate::state::{Config, Status, CONFIG, INFLIGHT_PACKETS, RECOVERY_STATES};
+use crate::state::{Config, CONFIG, RECOVERY_STATES};
+use crate::{execute, sudo};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:crosschain-swaps";
@@ -27,7 +27,10 @@ pub fn instantiate(
 
     // validate contract addresses and save to config
     let swap_contract = deps.api.addr_validate(&msg.swap_contract)?;
-    let state = Config { swap_contract };
+    let state = Config {
+        swap_contract,
+        track_ibc_callbacks: msg.track_ibc_sends.unwrap_or(false),
+    };
     CONFIG.save(deps.storage, &state)?;
 
     Ok(Response::new()
@@ -71,6 +74,7 @@ pub fn execute(
     }
 }
 
+/// Handling contract queries
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -91,45 +95,9 @@ pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, Contract
             sequence,
             ack,
             success,
-        } => receive_ack(deps, channel, sequence, ack, success),
+        } => sudo::receive_ack(deps, channel, sequence, ack, success),
         SudoMsg::ReceiveTimeout {} => unimplemented!(),
     }
-}
-
-fn receive_ack(
-    deps: DepsMut,
-    channel: String,
-    sequence: u64,
-    ack: String,
-    success: bool,
-) -> Result<Response, ContractError> {
-    deps.api.debug(&format!(
-        "received ack for packet {channel:?} {sequence:?}: {ack:?}, {success:?}"
-    ));
-    let response = Response::new().add_attribute("contract", "crosschain_swaps");
-    let recovery = INFLIGHT_PACKETS.may_load(deps.storage, (&channel, sequence))?;
-    INFLIGHT_PACKETS.remove(deps.storage, (&channel, sequence));
-    let Some(mut recovery) = recovery else {
-      return Ok(response.add_attribute("msg", "received unexpected ack"))
-    };
-
-    if success {
-        return Ok(response.add_attribute("msg", "packet successfully delviered"));
-    }
-
-    let recovery_addr = recovery.recovery_addr.clone();
-    RECOVERY_STATES.update(deps.storage, &recovery_addr, |recoveries| {
-        recovery.status = Status::AckFailure;
-        let Some(mut recoveries) = recoveries else {
-            return Ok::<_, ContractError>(vec![recovery])
-        };
-        recoveries.push(recovery);
-        Ok(recoveries)
-    })?;
-
-    Ok(response
-        .add_attribute("msg", "Recovery Stored")
-        .add_attribute("reecovery_addr", recovery_addr))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

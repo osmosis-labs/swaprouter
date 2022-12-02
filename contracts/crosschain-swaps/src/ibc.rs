@@ -16,8 +16,8 @@ pub struct Height {
     revision_height: Option<u64>,
 }
 
-// We need to define the transfer here as a stargate messages because this is
-// not yet supported by cosmwasm-std
+// We need to define the transfer here as a stargate message because this is
+// not yet supported by cosmwasm-std. See https://github.com/CosmWasm/cosmwasm/issues/1477
 #[derive(
     Clone,
     PartialEq,
