@@ -18,10 +18,34 @@ fn get_channel(channel: &str) -> Result<String, ContractError> {
     // use storage to make this more dynamic
     CHANNEL_MAP
         .get(channel)
-        .map(|s| s.to_string())
+        .map(|s| s.channel.to_string())
         .ok_or(ContractError::CustomError {
             val: "invalid channel".to_string(),
         })
+}
+
+// Validate that the receiver address is a valid address for the destination chain.
+// This will prevent IBC transfers from failing after forwarding
+fn validate_receiver(channel: &str, receiver: Addr) -> Result<Addr, ContractError> {
+    let Ok((prefix, _, _)) = bech32::decode(receiver.as_str()) else {
+        return Err(ContractError::CustomError { val: format!("invalid receiver {receiver} for channel {channel}") })
+    };
+    let expected_prefix =
+        CHANNEL_MAP
+            .get(channel)
+            .map(|s| s.addr_prefix)
+            .ok_or(ContractError::CustomError {
+                val: "invalid channel".to_string(),
+            })?;
+
+    if prefix != expected_prefix {
+        return Err(ContractError::CustomError {
+            val: format!(
+                "invalid receiver {receiver} for channel {channel}. Expected {expected_prefix}"
+            ),
+        });
+    };
+    Ok(receiver)
 }
 
 /// This is the main execute call of this contract.
@@ -58,7 +82,7 @@ pub fn swap_and_forward(
             contract_addr,
             forward_to: ForwardTo {
                 channel: get_channel(&channel)?,
-                receiver,
+                receiver: validate_receiver(&channel, receiver)?,
                 failed_delivery,
             },
         },

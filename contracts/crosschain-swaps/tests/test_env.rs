@@ -71,6 +71,7 @@ impl TestEnv {
             get_crosschain_swaps_wasm(),
             &CrosschainInstantiate {
                 swap_contract: swaprouter_address.clone(),
+                track_ibc_sends: None,
             },
         );
 
