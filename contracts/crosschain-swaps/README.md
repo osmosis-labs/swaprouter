@@ -23,20 +23,24 @@ of an IBC transfer to do crosschain swaps would look as follows:
             "output_denom":"token1",
             "slipage":{"max_slipage_percentage":"5"},
             "receiver":"juno1receiver",
-            "channel":"junochannel",
+            "channel":"juno",
             "failed_delivery":null
         }
     }
 }}
 ```
 
-If `track_ibc_callbacks` is enabled, the `failed_delivery` key can be set to an
-address on Osmosis that will be allowed to recover the tokens in case of a
-failure.
+Channels are hard-coded in the contract, so the user should specify one of the
+supported chains: "axelar", "juno", "cosmoshub". In future (once ack/timeout
+tracking is supported by the chain), any channel should be allowed. 
 
+If `track_ibc_callbacks` is enabled during instantiation, the `failed_delivery`
+key can be set to an address on Osmosis that will be allowed to recover the
+tokens in case of a failure.
 
-`slipage` can be set to a percentage of the twap price (as shown above), or as
+The `slipage` can be set to a percentage of the twap price (as shown above), or as
 the minimum amount of tokens expected to be received: `{"min_output_amount": "100"}`.
+
 
 
 ## Requirements
