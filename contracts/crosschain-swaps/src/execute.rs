@@ -2,7 +2,7 @@ use cosmwasm_std::{coins, from_binary, to_binary, wasm_execute, BankMsg, Reply, 
 use cosmwasm_std::{Addr, Coin, DepsMut, Response, SubMsg, SubMsgResponse, SubMsgResult};
 use swaprouter::msg::{ExecuteMsg as SwapRouterExecute, Slipage, SwapResponse};
 
-use crate::consts::{FORWARD_REPLY_ID, PACKET_LIFETIME, SWAP_REPLY_ID};
+use crate::consts::{CHANNEL_MAP, FORWARD_REPLY_ID, PACKET_LIFETIME, SWAP_REPLY_ID};
 use crate::ibc::{MsgTransfer, MsgTransferResponse};
 use crate::msg::{CrosschainSwapResponse, Recovery};
 
@@ -11,6 +11,18 @@ use crate::state::{
     FORWARD_REPLY_STATES, INFLIGHT_PACKETS, RECOVERY_STATES, SWAP_REPLY_STATES,
 };
 use crate::ContractError;
+
+fn get_channel(channel: &str) -> Result<String, ContractError> {
+    // Only allowing channels explicitely defined in the map.
+    // In the future we can default to the channel name or
+    // use storage to make this more dynamic
+    CHANNEL_MAP
+        .get(channel)
+        .map(|s| s.to_string())
+        .ok_or(ContractError::CustomError {
+            val: "invalid channel".to_string(),
+        })
+}
 
 /// This is the main execute call of this contract.
 ///
@@ -45,7 +57,7 @@ pub fn swap_and_forward(
             block_time,
             contract_addr,
             forward_to: ForwardTo {
-                channel,
+                channel: get_channel(&channel)?,
                 receiver,
                 failed_delivery,
             },
@@ -56,7 +68,7 @@ pub fn swap_and_forward(
 }
 
 pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractError> {
-    deps.api.debug("handle_swap_reply");
+    deps.api.debug(&format!("handle_swap_reply"));
     // TODO: Warning! This may be succeptible to "reentrancy". We are assuming
     //       that the swaprouter this contract was initialized with is the
     //       correct one and that it doesn't call back into this contract (which
@@ -120,7 +132,20 @@ pub fn handle_swap_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contract
     if !config.track_ibc_callbacks || swap_msg_state.forward_to.failed_delivery.is_none() {
         // If we're not tracking callbacks, or there isn't any recovery addres,
         // then there's no need to listen to the response of the send.
-        return Ok(response.add_message(ibc_transfer));
+        // The response data
+
+        // Add the response data since it won't be added in the reply.
+        let amount = swap_response.amount;
+        let denom = swap_response.token_out_denom;
+        let channel_id = swap_msg_state.forward_to.channel;
+        let to_address = swap_msg_state.forward_to.receiver;
+        let data = CrosschainSwapResponse {
+            msg: format!("Sent {amount}{denom} to {channel_id}/{to_address}"),
+        };
+
+        return Ok(response
+            .set_data(to_binary(&data)?)
+            .add_message(ibc_transfer));
     }
 
     // Store the ibc send information and the user's failed delivery preference
@@ -154,7 +179,6 @@ pub fn handle_forward_reply(deps: DepsMut, msg: Reply) -> Result<Response, Contr
         MsgTransferResponse::decode(&b[..]).map_err(|_e| ContractError::CustomError {
             val: "could not decode response".to_string(),
         })?;
-    deps.api.debug(&format!("response: {response:?}"));
 
     // Similar consideration as the warning above. Is it safe for this to be an Item?
     let ForwardMsgReplyState {
