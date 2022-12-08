@@ -15,6 +15,10 @@ pub struct InstantiateMsg {
     /// The information about the packet sender and recovery address is still
     /// stored, so recovery could be possible after a contract upgrade.
     pub track_ibc_sends: Option<bool>,
+    /// These are the channels that will be accepted by the contract. This is
+    /// needed to avoid sending packets to addresses not supported by the
+    /// receiving chain. The channels are specified as (bech32_prefix, channel_id)
+    pub channels: Vec<(String, String)>,
 }
 
 #[cw_serde]
@@ -31,9 +35,8 @@ pub enum ExecuteMsg {
     OsmosisSwap {
         input_coin: Coin,
         output_denom: String,
-        slipage: Slipage,
         receiver: Addr,
-        channel: String,
+        slipage: Slipage,
         failed_delivery: Option<Recovery>,
     },
     /// Executing a recover will transfer any recoverable tokens that the sender

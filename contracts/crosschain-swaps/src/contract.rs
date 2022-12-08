@@ -1,4 +1,4 @@
-#[cfg(not(feature = "library"))]
+#[cfg(not(feature = "imported"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
@@ -8,7 +8,7 @@ use cw2::set_contract_version;
 use crate::consts::{FORWARD_REPLY_ID, SWAP_REPLY_ID};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg};
-use crate::state::{Config, CONFIG, RECOVERY_STATES};
+use crate::state::{Config, CHANNEL_MAP, CONFIG, RECOVERY_STATES};
 use crate::{execute, sudo};
 
 // version info for migration info
@@ -16,7 +16,7 @@ const CONTRACT_NAME: &str = "crates.io:crosschain-swaps";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Handling contract instantiation
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "imported"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -32,19 +32,22 @@ pub fn instantiate(
         track_ibc_callbacks: msg.track_ibc_sends.unwrap_or(false),
     };
     CONFIG.save(deps.storage, &state)?;
+    for (prefix, channel) in msg.channels.into_iter() {
+        CHANNEL_MAP.save(deps.storage, &prefix, &channel)?;
+    }
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender))
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "imported"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     match msg {}
 }
 
 /// Handling contract execution
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "imported"), entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -55,9 +58,8 @@ pub fn execute(
         ExecuteMsg::OsmosisSwap {
             input_coin,
             output_denom,
-            slipage,
             receiver,
-            channel,
+            slipage,
             failed_delivery,
         } => execute::swap_and_forward(
             deps,
@@ -67,7 +69,6 @@ pub fn execute(
             output_denom,
             slipage,
             receiver,
-            channel,
             failed_delivery,
         ),
         ExecuteMsg::Recover {} => execute::recover(deps, info.sender),
@@ -75,7 +76,7 @@ pub fn execute(
 }
 
 /// Handling contract queries
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "imported"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Recoverable { addr } => to_binary(
@@ -86,7 +87,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "imported"), entry_point)]
 pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
     match msg {
         SudoMsg::ReceivePacket {} => unimplemented!(),
@@ -100,7 +101,7 @@ pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, Contract
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "imported"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, reply: Reply) -> Result<Response, ContractError> {
     deps.api
         .debug(&format!("executing crosschain reply: {reply:?}"));
